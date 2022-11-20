@@ -1,124 +1,212 @@
-use std::fmt;
+use std::{fmt, collections::HashMap, hash::Hash};
 
-pub trait Graph {
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
+pub struct Node {
+    uid: usize
+}
+
+impl Node {
+    pub fn new() -> Self {
+        Node { uid: std::usize::MAX }
+    }
+}
+
+pub trait Graph<T> {
+    // Create an unconnected node
+    // O(1) amortized
+    fn add_node(&mut self, value: T) -> Node;
+
+    // Add edge between two existing nodes
+    // O(1)
+    fn add_edge(&mut self, source: Node, target: Node);
+
+    // Check if node exists in this graph
+    // O(1)
+    fn node_exists(&self, node: Node) -> bool;
+
+    // Iterate over all nodes
+    fn nodes(&self) -> NodeIterator<T>;
+
+    // Get value associated with node
+    // O(1)
+    fn get_value(&self, node: Node) -> &T;
+
+    // Number of nodes
     fn size(&self) -> usize;
-    fn add_edge(&mut self, source: usize, target: usize);
-    fn node_exists(&self, node: usize) -> bool;
-    fn get_neighbours(&self, node: usize) -> &Vec<usize>;
+
+    // Get a vector of neighbouring nodes
+    fn get_neighbours(&self, node: Node) -> Vec<Node>;
 }
 
-/// Graph
-///
-/// Adjacency list might look like
-/// 0 [1,2]
-/// 1 [ ]
-/// 2 [3]
-/// 3 [1]
-/// Number of rows is equal to the number of nodes
-/// Numbers in each row represent edges from row index to said number
-///
-///
-
-pub struct DirectedGraph {
-    adjacency_list: Vec<Vec<usize>>,
+struct InternalNode<T> {
+    value: T,
+    index: usize,
+    neighbours: Vec<usize>
 }
 
-impl Graph for DirectedGraph {
-    ///
-    /// Adds an edge between nodes a and b. Creates nodes if they don't exist.
-    ///
-    fn add_edge(&mut self, source: usize, target: usize) {
-        // Create nodes
-        while !self.node_exists(source) || !self.node_exists(target) {
-            self.adjacency_list.push(Vec::new());
+pub struct DirectedGraph<T> {
+    adjacency_list: Vec<InternalNode<T>>,
+}
+
+impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for DirectedGraph<T> {
+
+    // Constructs graph
+    // O(N) time
+    // O(unique vertex count) size
+    fn from(arr: [(T, T); N]) -> Self {
+        let mut map: HashMap<T, Node> = HashMap::new();
+        let mut graph: DirectedGraph<T> = DirectedGraph { adjacency_list: Vec::new() };
+
+        for (source, target) in arr {
+            let source_node: Node;
+            let target_node: Node;
+            if !map.contains_key(&source) {
+                let cloned_value = source.clone();
+                source_node = graph.add_node(source);
+                map.insert(cloned_value, source_node);
+            }
+            else {
+                source_node = map[&source];
+            }
+
+            if !map.contains_key(&target) {
+                let cloned_value = target.clone();
+                target_node = graph.add_node(target);
+                map.insert(cloned_value, target_node);
+            }
+            else {
+                target_node = map[&target];
+            }
+
+            graph.add_edge(source_node, target_node);
         }
 
-        // New edge
-        self.adjacency_list[source].push(target);
+        graph
+    }
+}
+
+impl<T> Graph<T> for DirectedGraph<T> {
+
+    fn add_node(&mut self, value: T) -> Node {
+        let new_node_index = self.adjacency_list.len();
+        self.adjacency_list.push(InternalNode { value, index: new_node_index, neighbours: Vec::new() });
+        Node {uid: new_node_index}
     }
 
-    fn node_exists(&self, node: usize) -> bool {
-        node < self.adjacency_list.len()
+    fn add_edge(&mut self, source: Node, target: Node) {
+
+        for node in vec![source, target] {
+            if !self.node_exists(node) {
+                panic!("Node doesn't exist");
+            }
+        }
+
+        self.adjacency_list[source.uid].neighbours.push(target.uid);
+    }
+
+    fn get_value(&self, node: Node) -> &T {
+        &self.adjacency_list[node.uid].value
+    }
+
+    fn get_neighbours(&self, node: Node) -> Vec<Node> {
+        if !self.node_exists(node) {
+            panic!("Node doesn't exist!")
+        }
+
+        let mut neighbour_nodes = Vec::new();
+        for neighbour_index in self.adjacency_list[node.uid].neighbours.iter() {
+            neighbour_nodes.push(Node { uid: self.adjacency_list[*neighbour_index].index });
+        }
+
+        neighbour_nodes
+    }
+
+    fn node_exists(&self, node: Node) -> bool {
+        self.node_exists_index(node.uid)
+    }
+
+    fn nodes(&self) -> NodeIterator<T> {
+        NodeIterator{graph: self, current_node_index: 0}
     }
 
     fn size(&self) -> usize {
         self.adjacency_list.len()
     }
+}
 
-    fn get_neighbours(&self, node: usize) -> &Vec<usize> {
-        &self.adjacency_list[node]
+impl<T> DirectedGraph<T> {
+
+    pub fn new() -> Self {
+        DirectedGraph { adjacency_list: Vec::new() }
+    }
+
+    pub fn edges(&self) -> EdgeIterator<T> {
+        EdgeIterator{graph: self, current_node_index: 0, current_target_index: 0}
+    }
+
+    fn node_exists_index(&self, index: usize) -> bool {
+        index < self.adjacency_list.len()
     }
 }
 
-impl DirectedGraph {
-
-    pub fn nodes(&self) -> NodeIterator {
-        NodeIterator{graph: self, current_node: 0}
-    }
-
-    pub fn edges(&self) -> EdgeIterator {
-        EdgeIterator{graph: self, current_node: 0, current_target_index: 0}
-    }
-
-    pub fn new() -> Self {
-        DirectedGraph {
-            adjacency_list: Vec::new(),
-        }
-    }
-
+impl<T: std::fmt::Display> DirectedGraph<T> {
     fn print(&self, pretty: bool) -> String {
+
         let mut s = String::new();
-        for (row_index, row) in self.adjacency_list.iter().enumerate() {
-            s.push_str(&format!("{}[", row_index));
-            for (num_index, num) in row.iter().enumerate() {
-                s.push_str(&num.to_string());
-                if num_index < row.len() - 1 {
+        for row in self.adjacency_list.iter() {
+
+            s.push_str(&format!("{}[", row.value));
+
+            for (num_index, neighbour) in row.neighbours.iter().enumerate() {
+                s.push_str(&self.adjacency_list[*neighbour].value.to_string());
+                if num_index < row.neighbours.len() - 1 {
                     s.push(',');
                 }
             }
-            s.push_str(&format!("]{}", if pretty { "" } else { "\n" }));
+            s.push_str(&format!("]{}", if pretty { "\n" } else { "" }));
         }
         s
     }
 }
 
-impl fmt::Display for DirectedGraph {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(false))
-    }
-}
-
-impl fmt::Debug for DirectedGraph {
+impl<T: std::fmt::Display> fmt::Display for DirectedGraph<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(true))
     }
 }
 
-pub struct NodeIterator<'a> {
-    graph: &'a DirectedGraph,
-    current_node: usize
-}
-
-impl Iterator for NodeIterator<'_> {
-    type Item = usize;
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.graph.node_exists(self.current_node) {
-            return None
-        }
-
-        self.current_node += 1;
-        Some(self.current_node - 1)
+impl<T: std::fmt::Display> fmt::Debug for DirectedGraph<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print(false))
     }
 }
 
-pub struct EdgeIterator<'a> {
-    graph: &'a DirectedGraph,
-    current_node: usize,
+pub struct NodeIterator<'a, T> {
+    graph: &'a DirectedGraph<T>,
+    current_node_index: usize
+}
+
+impl<'a, T> Iterator for NodeIterator<'a, T> {
+    type Item = Node;
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.graph.node_exists_index(self.current_node_index) {
+            return None
+        }
+
+        let ret = Some( Node { uid: self.current_node_index });
+        self.current_node_index += 1;
+        ret
+    }
+}
+
+pub struct EdgeIterator<'a, T> {
+    graph: &'a DirectedGraph<T>,
+    current_node_index: usize,
     current_target_index: usize
 }
 
-impl Iterator for EdgeIterator<'_> {
-    type Item = (usize, usize);
+impl<T> Iterator for EdgeIterator<'_, T> {
+    type Item = (Node, Node);
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.find_next_existing_edge() {
@@ -126,8 +214,8 @@ impl Iterator for EdgeIterator<'_> {
         }
 
         let ret = Some((
-            self.current_node,
-            self.graph.adjacency_list[self.current_node][self.current_target_index]
+            Node { uid: self.current_node_index },
+            Node { uid: self.graph.adjacency_list[self.current_node_index].neighbours[self.current_target_index]}
         ));
 
         self.current_target_index += 1;
@@ -135,13 +223,13 @@ impl Iterator for EdgeIterator<'_> {
     }
 }
 
-impl EdgeIterator<'_> {
+impl<T> EdgeIterator<'_, T> {
     fn find_next_existing_edge(&mut self) -> bool {
-        while self.graph.node_exists(self.current_node) {
-            if self.current_target_index < self.graph.adjacency_list[self.current_node].len() {
+        while self.graph.node_exists_index(self.current_node_index) {
+            if self.current_target_index < self.graph.adjacency_list[self.current_node_index].neighbours.len() {
                 return true;
             }
-            self.current_node += 1;
+            self.current_node_index += 1;
             self.current_target_index = 0;
         }
         false

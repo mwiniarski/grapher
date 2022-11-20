@@ -1,7 +1,9 @@
-#[derive(PartialEq, Eq, Debug)]
+use crate::graph::{*};
+
+#[derive (Debug)]
 pub struct PriorityNode {
     pub priority: usize,
-    pub node: usize,
+    pub node: Node,
 }
 
 impl Ord for PriorityNode {
@@ -16,13 +18,23 @@ impl PartialOrd for PriorityNode {
     }
 }
 
+impl Eq for PriorityNode {}
+
+impl PartialEq for PriorityNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
+    }
+}
+
 #[test]
 fn test_priority_ordering() {
     use std::collections::BinaryHeap;
     let mut heap = BinaryHeap::new();
-    heap.push(PriorityNode{priority:3,node:2});
-    heap.push(PriorityNode{priority:1,node:2});
-    heap.push(PriorityNode{priority:2,node:2});
+    let g = DirectedGraph::from([(0,0)]);
+    let node = g.nodes().collect::<Vec<Node>>()[0];
+    heap.push(PriorityNode{priority:3, node});
+    heap.push(PriorityNode{priority:1, node});
+    heap.push(PriorityNode{priority:2, node});
     assert_eq!(heap.pop().unwrap().priority, 1);
     assert_eq!(heap.pop().unwrap().priority, 2);
     assert_eq!(heap.pop().unwrap().priority, 3);
@@ -32,31 +44,38 @@ fn test_priority_ordering() {
 fn test_nodes_dont_matter() {
     use std::collections::BinaryHeap;
     let mut heap = BinaryHeap::new();
-    heap.push(PriorityNode{priority:1,node:3});
-    heap.push(PriorityNode{priority:1,node:1});
-    heap.push(PriorityNode{priority:1,node:2});
-    assert_eq!(heap.pop().unwrap().node, 3);
-    assert_eq!(heap.pop().unwrap().node, 1);
-    assert_eq!(heap.pop().unwrap().node, 2);
+    let mut g = DirectedGraph::new();
+    let node1 = g.add_node(1);
+    let node2 = g.add_node(2);
+    let node3 = g.add_node(3);
+    heap.push(PriorityNode{priority:1,node:node3});
+    heap.push(PriorityNode{priority:1,node:node1});
+    heap.push(PriorityNode{priority:1,node:node2});
+
+    assert_eq!(heap.pop().unwrap().node, node3);
+    assert_eq!(heap.pop().unwrap().node, node1);
+    assert_eq!(heap.pop().unwrap().node, node2);
 }
 
 #[test]
 fn test_ascending_vs_descending_order_push() {
     use std::time::Instant;
     use std::collections::BinaryHeap;
+    let g = DirectedGraph::from([(1,1)]);
+    let node = g.nodes().collect::<Vec<Node>>()[0];
     
     let mut heap = BinaryHeap::new();
     //let vec:Vec<usize> = (0..10000).collect();
     
     let now = Instant::now();
     for i in (0..10000).into_iter() {
-        heap.push(PriorityNode{priority:i, node:1});
+        heap.push(PriorityNode{priority:i, node});
     }
     println!("Ascending: {}", now.elapsed().as_micros());
 
     let now1 = Instant::now();
     for i in (0..10000).into_iter().rev() {
-        heap.push(PriorityNode{priority:i, node:1});
+        heap.push(PriorityNode{priority:i, node});
     }
     println!("Descending: {}", now1.elapsed().as_micros());
 }
