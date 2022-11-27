@@ -1,3 +1,8 @@
+use std::collections::{HashMap, HashSet, BTreeMap, BTreeSet, BinaryHeap, VecDeque};
+
+use grapher::graph::{DirectedGraph, Graph};
+
+
 #[test]
 fn test1() {
     #[derive(Debug)]
@@ -10,7 +15,8 @@ fn test1() {
     v.push(A::A(5u8));
     v.push(A::B(3.14f32));
 
-    for val in &v {
+    for val in v.into_iter() {
         println!("{:?}", val);
     }
 }
+

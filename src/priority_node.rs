@@ -65,7 +65,6 @@ fn test_ascending_vs_descending_order_push() {
     let node = g.nodes().collect::<Vec<Node>>()[0];
     
     let mut heap = BinaryHeap::new();
-    //let vec:Vec<usize> = (0..10000).collect();
     
     let now = Instant::now();
     for i in (0..10000).into_iter() {

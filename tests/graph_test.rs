@@ -66,5 +66,5 @@ fn graph_does_not_has_ghost_nodes()
 fn graph_has_correct_size()
 {
     let g = DirectedGraph::from([(1,2)]);
-    assert_eq!(g.size(), 2);
+    assert_eq!(g.len(), 2);
 }
