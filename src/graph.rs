@@ -1,5 +1,8 @@
-use std::{fmt, collections::HashMap, hash::Hash};
-use crate::adjacency_list;
+use std::collections::HashMap;
+use std::{fmt, hash::Hash};
+use crate::directed::*;
+use crate::graph_trait::*;
+use std::iter::Iterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Node {
@@ -10,50 +13,142 @@ impl Node {
     pub fn new() -> Self {
         Node { uid: std::usize::MAX }
     }
+
+    fn from(node: GraphNode) -> Self {
+        Node { uid: node.uid }
+    }
 }
 
-pub trait Graph<T> {
-    // Create an unconnected node
-    // O(1) amortized
-    fn add_node(&mut self, value: T) -> Node;
-
-    // Add edge between two existing nodes
-    // O(1)
-    fn add_edge(&mut self, source: Node, target: Node);
-
-    // Iterate over all nodes
-    fn nodes(&self) -> NodeIterator;
-
-    // Iterate over all edges
-    fn edges(&self) -> EdgeIterator;
-
-    // Get value associated with node
-    // O(1)
-    fn get_value(&self, node: Node) -> &T;
-
-    // Number of nodes
-    fn len(&self) -> usize;
-
-    // Get a vector of neighbouring nodes
-    fn get_neighbours(&self, node: Node) -> Vec<Node>;
+impl GraphNode {
+    fn from(node: Node) -> Self {
+        GraphNode { uid: node.uid }
+    }
 }
 
-pub struct DirectedGraph<T> {
-    adjacency_list: adjacency_list::AdjancencyList,
+pub struct NodeIterator<'a> {
+    iterator: GraphNodeIterator<'a>
+}
+
+pub struct EdgeIterator<'a> {
+    iterator: GraphEdgeIterator<'a>
+}
+
+pub struct Graph<T, U> {
+    graph: U,
     values: Vec<T>
 }
 
-impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for DirectedGraph<T> {
+impl<T, U: GraphType> Graph<T, U> {
+    // Create an unconnected node
+    // O(1) amortized
+    pub fn add_node(&mut self, value: T) -> Node {
+        self.values.push(value);
+        Node::from(self.graph.add_node())
+    }
+
+    // Add edge between two existing nodes
+    // O(1)
+    pub fn add_edge(&mut self, source: Node, target: Node) {
+        self.graph.add_edge(GraphNode::from(source), GraphNode::from(target))
+    }
+
+    // Iterate over all nodes
+    pub fn nodes(&self) -> NodeIterator {
+        NodeIterator { iterator: self.graph.nodes() }
+    }
+
+    // Iterate over all edges
+    pub fn edges(&self) -> EdgeIterator {
+        EdgeIterator { iterator: self.graph.edges() }
+    }
+
+    // Get value associated with node
+    // O(1)
+    pub fn get_value(&self, node: Node) -> &T {
+        &self.values[node.uid]
+    }
+
+    // Number of nodes
+    pub fn len(&self) -> usize {
+        self.graph.len()
+    }
+
+    // Get a vector of neighbouring nodes
+    pub fn get_neighbours(&self, node: Node) -> Vec<Node> {
+        self.graph.get_neighbours(GraphNode::from(node))
+            .iter()
+            .map(|x| Node { uid: x.uid })
+            .collect()
+    }
+}
+
+impl<T: fmt::Display, U: GraphType> Graph<T, U> {
+    fn print(&self, pretty: bool) -> String {
+
+        let mut output = String::new();
+        for node in self.nodes() {
+            output.push_str(&format!("{}[", self.get_value(node)));
+
+            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
+                output.push_str(&self.get_value(neighbour).to_string());
+                if num_index < self.get_neighbours(node).len() - 1 {
+                    output.push(',');
+                }
+            }
+            output.push_str(&format!("]{}", if pretty { "\n" } else { "" }));
+        }
+        output
+    }
+}
+
+impl<T: fmt::Display, U: GraphType> fmt::Display for Graph<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print(true))
+    }
+}
+
+impl<T: fmt::Display, U: GraphType> fmt::Debug for Graph<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print(false))
+    }
+}
+
+impl<'a> Iterator for NodeIterator<'a> {
+    type Item = Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.iterator.next() {
+            Some(node) => Some(Node::from(node)),
+            None => None
+        }
+    }
+}
+
+impl<'a> Iterator for EdgeIterator<'a> {
+    type Item = (Node, Node);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.iterator.next() {
+            Some((source, target)) => Some((Node::from(source), Node::from(target))),
+            None => None
+        }
+    }
+}
+
+impl<T> Graph<T, Directed> {
+    pub fn new_directed() -> Self {
+        Graph { graph: Directed::new(), values: Vec::new() }
+    }
+}
+
+impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T, Directed> {
 
     // Constructs graph
     // O(N) time
     // O(unique vertex count) size
     fn from(arr: [(T, T); N]) -> Self {
         let mut map: HashMap<T, Node> = HashMap::new();
-        let mut graph: DirectedGraph<T> = DirectedGraph { 
-            adjacency_list: adjacency_list::AdjancencyList::new(),
-            values: Vec::new() 
-        };
+        let mut graph = Graph::new_directed();
 
         for (source, target) in arr {
             let source_node: Node;
@@ -80,120 +175,5 @@ impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for DirectedGraph<
         }
 
         graph
-    }
-}
-
-impl<T> Graph<T> for DirectedGraph<T> {
-
-    fn add_node(&mut self, value: T) -> Node {
-
-        self.adjacency_list.add_node();
-        self.values.push(value);
-
-        Node {uid: self.adjacency_list.len() - 1}
-    }
-
-    fn add_edge(&mut self, source: Node, target: Node) {
-        self.adjacency_list.add_edge(source.uid, target.uid);
-    }
-
-    fn get_value(&self, node: Node) -> &T {
-        &self.values[node.uid]
-    }
-
-    fn get_neighbours(&self, node: Node) -> Vec<Node> {
-
-        let mut neighbour_nodes = Vec::new();
-        for neighbour_index in self.adjacency_list.get_neighbours(node.uid) {
-            neighbour_nodes.push(Node { uid: *neighbour_index });
-        }
-
-        neighbour_nodes
-    }
-
-    fn nodes(&self) -> NodeIterator {
-        NodeIterator{ iterator: self.adjacency_list.nodes() }
-    }
-
-    fn edges(&self) -> EdgeIterator {
-        EdgeIterator { iterator: self.adjacency_list.edges() }
-    }
-
-    fn len(&self) -> usize {
-        self.adjacency_list.len()
-    }
-}
-
-impl<T> DirectedGraph<T> {
-
-    pub fn new() -> Self {
-        DirectedGraph { 
-            adjacency_list: adjacency_list::AdjancencyList::new(),
-            values: Vec::new() 
-        }
-    }
-}
-
-impl<T: std::fmt::Display> DirectedGraph<T> {
-    fn print(&self, pretty: bool) -> String {
-
-        let mut output = String::new();
-        for node in self.nodes() {
-            output.push_str(&format!("{}[", self.get_value(node)));
-
-            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
-                output.push_str(&self.get_value(neighbour).to_string());
-                if num_index < self.get_neighbours(node).len() - 1 {
-                    output.push(',');
-                }
-            }
-            output.push_str(&format!("]{}", if pretty { "\n" } else { "" }));
-        }
-        output
-    }
-}
-
-impl<T: std::fmt::Display> fmt::Display for DirectedGraph<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(true))
-    }
-}
-
-impl<T: std::fmt::Display> fmt::Debug for DirectedGraph<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(false))
-    }
-}
-
-pub struct NodeIterator<'a> {
-    iterator: adjacency_list::NodeIterator<'a>
-}
-
-impl<'a> Iterator for NodeIterator<'a> {
-    type Item = Node;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some(index) => Some(Node { uid: index }),
-            None => None
-        }
-    }
-}
-
-pub struct EdgeIterator<'a> {
-    iterator: adjacency_list::EdgeIterator<'a>
-}
-
-impl Iterator for EdgeIterator<'_> {
-    type Item = (Node, Node);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some((source, target)) => Some((
-                Node { uid: source },
-                Node { uid: target }
-            )),
-            None => None
-        }
     }
 }

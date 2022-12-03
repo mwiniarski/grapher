@@ -29,11 +29,11 @@ impl AdjancencyList {
     }
 
     pub fn nodes(&self) -> NodeIterator {
-        NodeIterator { list: self, current_node_index: 0 }
+        NodeIterator { list: &self, current_node_index: 0 }
     }
 
     pub fn edges(&self) -> EdgeIterator {
-        EdgeIterator { list: self, current_node_index: 0, current_target_index: 0 }
+        EdgeIterator { list: &self, current_node_index: 0, current_neighbour_index: 0 }
     }
 }
 
@@ -58,7 +58,7 @@ impl<'a> Iterator for NodeIterator<'a> {
 pub struct EdgeIterator<'a> {
     list: &'a AdjancencyList,
     current_node_index: usize,
-    current_target_index: usize
+    current_neighbour_index: usize
 }
 
 impl Iterator for EdgeIterator<'_> {
@@ -71,10 +71,10 @@ impl Iterator for EdgeIterator<'_> {
 
         let ret = Some((
             self.current_node_index,
-            self.list.get_neighbours(self.current_node_index)[self.current_target_index]
+            self.list.get_neighbours(self.current_node_index)[self.current_neighbour_index]
         ));
 
-        self.current_target_index += 1;
+        self.current_neighbour_index += 1;
         ret
     }
 }
@@ -82,11 +82,11 @@ impl Iterator for EdgeIterator<'_> {
 impl EdgeIterator<'_> {
     fn find_next_existing_edge(&mut self) -> bool {
         while self.list.node_exists(self.current_node_index) {
-            if self.current_target_index < self.list.get_neighbours(self.current_node_index).len() {
+            if self.current_neighbour_index < self.list.get_neighbours(self.current_node_index).len() {
                 return true;
             }
             self.current_node_index += 1;
-            self.current_target_index = 0;
+            self.current_neighbour_index = 0;
         }
         false
     }

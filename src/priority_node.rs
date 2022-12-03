@@ -30,7 +30,7 @@ impl PartialEq for PriorityNode {
 fn test_priority_ordering() {
     use std::collections::BinaryHeap;
     let mut heap = BinaryHeap::new();
-    let g = DirectedGraph::from([(0,0)]);
+    let g = Graph::from([(0,0)]);
     let node = g.nodes().collect::<Vec<Node>>()[0];
     heap.push(PriorityNode{priority:3, node});
     heap.push(PriorityNode{priority:1, node});
@@ -44,7 +44,7 @@ fn test_priority_ordering() {
 fn test_nodes_dont_matter() {
     use std::collections::BinaryHeap;
     let mut heap = BinaryHeap::new();
-    let mut g = DirectedGraph::new();
+    let mut g = Graph::from([]);
     let node1 = g.add_node(1);
     let node2 = g.add_node(2);
     let node3 = g.add_node(3);
@@ -61,7 +61,7 @@ fn test_nodes_dont_matter() {
 fn test_ascending_vs_descending_order_push() {
     use std::time::Instant;
     use std::collections::BinaryHeap;
-    let g = DirectedGraph::from([(1,1)]);
+    let g = Graph::from([(1,1)]);
     let node = g.nodes().collect::<Vec<Node>>()[0];
     
     let mut heap = BinaryHeap::new();

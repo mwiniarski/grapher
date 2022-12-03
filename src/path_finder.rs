@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::graph::{Graph, Node};
+use crate::graph_trait::GraphType;
 use crate::priority_node;
 
 pub struct PathFinder;
@@ -14,7 +15,7 @@ impl PathFinder {
     /// # Panics
     /// Panics if either of nodes does not exist in the graph.
     ///
-    pub fn find_shortest_path<T, G: Graph<T>>(graph: &G, source: Node, target: Node) -> Option<Vec<Node>> {
+    pub fn find_shortest_path<T, U: GraphType>(graph: &Graph<T, U>, source: Node, target: Node) -> Option<Vec<Node>> {
 
         // Initialize state
         let mut distance: HashMap<Node, usize> = HashMap::new();
@@ -98,15 +99,15 @@ impl PathFinder {
     /// Panics if either of nodes does not exist in the graph or
     /// they are the same node.
     ///
-    pub fn find_all_paths<T, G: Graph<T>>(graph: &G, source: Node, target: Node) -> Vec<Vec<Node>> {
+    pub fn find_all_paths<T, U: GraphType>(graph: &Graph<T, U>, source: Node, target: Node) -> Vec<Vec<Node>> {
         let mut all_paths: Vec<Vec<Node>> = Vec::new();
         let mut current_path: Vec<Node> = vec![source];
         PathFinder::find_paths(graph, &mut all_paths, &mut current_path, target);
         all_paths
     }
 
-    fn find_paths<T, G: Graph<T>>(
-        graph: &G,
+    fn find_paths<T, U: GraphType>(
+        graph: &Graph<T, U>,
         all_paths: &mut Vec<Vec<Node>>,
         current_path: &mut Vec<Node>,
         target: Node,

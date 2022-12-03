@@ -1,7 +1,8 @@
-use grapher::graph::{Node, Graph, DirectedGraph};
+use grapher::directed::Directed;
+use grapher::graph::{Node, Graph};
 use grapher::path_finder::PathFinder;
 
-fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &DirectedGraph<T>, values: [T; N], nodes: Option<Vec<Node>>) {
+fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T, Directed>, values: [T; N], nodes: Option<Vec<Node>>) {
     let nodes = nodes.unwrap();
     assert_eq!(values.len(), nodes.len());
 
@@ -11,7 +12,7 @@ fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &DirectedGrap
 }
 
 // O(n) way to get the node with value
-fn n<T: Eq>(graph: &DirectedGraph<T>, value: T) -> Node {
+fn n<T: Eq>(graph: &Graph<T, Directed>, value: T) -> Node {
     for node in graph.nodes() {
         if *graph.get_value(node) == value {
             return node;
@@ -23,7 +24,7 @@ fn n<T: Eq>(graph: &DirectedGraph<T>, value: T) -> Node {
 #[test]
 fn find_shortest_path()
 {
-    let g = DirectedGraph::from
+    let g = Graph::from
         ([(0,1), (0,2), (2,3), (1,3), (1,4), (3,4)]);
 
     compare_results(&g, [0, 1, 4], 
@@ -35,7 +36,7 @@ fn find_shortest_path()
 #[test]
 fn find_shortest_path_same_node()
 {
-    let mut g = DirectedGraph::from([(0,1)]);
+    let mut g = Graph::from([(0,1)]);
     let node0 = n(&g, 0);
     assert_eq!(None, PathFinder::find_shortest_path(&g, node0, node0));
 
@@ -47,7 +48,7 @@ fn find_shortest_path_same_node()
 #[test]
 fn find_shortest_path_loop()
 {
-    let g = DirectedGraph::from([(0,1), (1,0)]);
+    let g = Graph::from([(0,1), (1,0)]);
     let node0 = n(&g, 0);
     compare_results(&g, [0, 1, 0], 
         PathFinder::find_shortest_path(&g, node0, node0));
@@ -56,14 +57,14 @@ fn find_shortest_path_loop()
 #[test]
 fn find_shortest_path_disconnected()
 {
-    let g = DirectedGraph::from([(0,1),(2,3)]);
+    let g = Graph::from([(0,1),(2,3)]);
     assert_eq!(None, PathFinder::find_shortest_path(&g, n(&g, 0), n(&g, 2)));
 }
 
 #[test]
 fn find_all_paths_two_nodes()
 {
-    let g = DirectedGraph::from([(0,1)]);
+    let g = Graph::from([(0,1)]);
     let node0 = n(&g, 0);
     let node1 = n(&g, 1);
     assert_eq!(vec![vec![node0, node1]], PathFinder::find_all_paths(&g, node0, node1));
@@ -72,7 +73,7 @@ fn find_all_paths_two_nodes()
 #[test]
 fn find_all_paths_loops()
 {
-    let g = DirectedGraph::from([(0,0), (0,1), (1,0)]);
+    let g = Graph::from([(0,0), (0,1), (1,0)]);
     let node0 = n(&g, 0);
     let node1 = n(&g, 1);
     assert_eq!(vec![vec![node0,node0], vec![node0,node1,node0]], PathFinder::find_all_paths(&g, node0, node0));
@@ -81,7 +82,7 @@ fn find_all_paths_loops()
 #[test]
 fn find_all_paths_line()
 {
-    let g = DirectedGraph::from([(0,1), (1,2)]);
+    let g = Graph::from([(0,1), (1,2)]);
     let node0 = n(&g, 0);
     let node1 = n(&g, 1);
     let node2 = n(&g, 2);
@@ -91,7 +92,7 @@ fn find_all_paths_line()
 #[test]
 fn find_all_paths_two_paths()
 {
-    let g = DirectedGraph::from([(0,1), (1,2), (0,2)]);
+    let g = Graph::from([(0,1), (1,2), (0,2)]);
     let node0 = n(&g, 0);
     let node1 = n(&g, 1);
     let node2 = n(&g, 2);
@@ -101,7 +102,7 @@ fn find_all_paths_two_paths()
 #[test]
 fn find_all_paths_circle()
 {
-    let g = DirectedGraph::from([(0,1), (1,0), (0,2)]);
+    let g = Graph::from([(0,1), (1,0), (0,2)]);
     let node0 = n(&g, 0);
     let node2 = n(&g, 2);
     assert_eq!(vec![vec![node0,node2]], PathFinder::find_all_paths(&g, node0, node2));
@@ -110,6 +111,6 @@ fn find_all_paths_circle()
 #[test]
 fn find_all_paths_disconnected_graph()
 {
-    let g = DirectedGraph::from([(0,1), (2,3)]);
+    let g = Graph::from([(0,1), (2,3)]);
     assert_eq!(Vec::<Vec::<Node>>::new(), PathFinder::find_all_paths(&g, n(&g, 0), n(&g, 3)));
 }
