@@ -18,3 +18,30 @@ fn test1() {
     }
 }
 
+#[test]
+fn test2() {
+    trait IsDog {}
+    trait IsBig {}
+
+    trait Barker {
+        fn bark(&self) {
+            println!("Woof")
+        }
+    }
+
+    impl<T: IsDog + IsBig> Barker for T {}
+
+    struct Star {}
+    impl IsDog for Star {}
+    impl IsBig for Star {}
+
+    let s: Star = Star{};
+    s.bark();
+}
+
+#[test]
+fn test3() {
+    for i in 0..5 {
+        println!("{:?}", i);
+    }
+}

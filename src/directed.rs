@@ -16,13 +16,13 @@ impl GraphType for Directed {
     }
 
     fn get_neighbours(&self, node: GraphNode) -> Vec<GraphNode> {
+        let neighbours = self.adjacency_list.get_neighbours(node.uid);
+        let mut ret = Vec::with_capacity(neighbours.len());
 
-        let mut neighbour_nodes = Vec::new();
-        for neighbour_index in self.adjacency_list.get_neighbours(node.uid) {
-            neighbour_nodes.push(GraphNode { uid: *neighbour_index });
+        for neighbour_index in neighbours {
+            ret.push(GraphNode { uid: *neighbour_index });
         }
-
-        neighbour_nodes
+        ret
     }
 
     fn nodes(&self) -> GraphNodeIterator {
@@ -36,10 +36,8 @@ impl GraphType for Directed {
     fn len(&self) -> usize {
         self.adjacency_list.len()
     }
-}
 
-impl Directed {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Directed { 
             adjacency_list: adjacency_list::AdjancencyList::new()
         }

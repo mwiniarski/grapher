@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Entry::*;
 use std::{fmt, hash::Hash};
 use crate::directed::*;
 use crate::graph_trait::*;
@@ -80,6 +81,18 @@ impl<T, U: GraphType> Graph<T, U> {
             .map(|x| Node { uid: x.uid })
             .collect()
     }
+
+    pub fn new() -> Self {
+        Graph { graph: U::new(), values: Vec::new() }
+    }
+}
+
+impl<T: Clone, U> Graph<T, U> {
+    // Get value associated with both ends of the edge. Makes copies
+    // O(1)
+    pub fn get_value_edge(&self, edge: (Node, Node)) -> (T, T) {
+        (self.values[edge.0.uid].clone(), self.values[edge.1.uid].clone())
+    }
 }
 
 impl<T: fmt::Display, U: GraphType> Graph<T, U> {
@@ -142,10 +155,6 @@ impl<T> Graph<T, Directed> {
 }
 
 impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T, Directed> {
-
-    // Constructs graph
-    // O(N) time
-    // O(unique vertex count) size
     fn from(arr: [(T, T); N]) -> Self {
         let mut map: HashMap<T, Node> = HashMap::new();
         let mut graph = Graph::new_directed();
@@ -170,6 +179,42 @@ impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T, Direc
             else {
                 target_node = map[&target];
             }
+
+            graph.add_edge(source_node, target_node);
+        }
+
+        graph
+    }
+}
+
+impl<T : Eq + Hash + Clone> Graph<T, Directed> {
+
+    // Constructs graph
+    // O(N) time
+    // O(unique vertex count) size
+    pub fn from_vec(vec: Vec<(T,T)>) -> Self {
+        let mut map: HashMap<T, Node> = HashMap::new();
+        let mut graph = Graph::new_directed();
+
+        for (source, target) in vec {
+
+            let source_node = match map.entry(source.clone()) {
+                Occupied(entry) => entry.get().clone(),
+                Vacant(entry) => {
+                    let node = graph.add_node(source);
+                    entry.insert(node);
+                    node
+                }
+            };
+
+            let target_node = match map.entry(target.clone()) {
+                Occupied(entry) => entry.get().clone(),
+                Vacant(entry) => {
+                    let node = graph.add_node(target);
+                    entry.insert(node);
+                    node
+                }
+            };
 
             graph.add_edge(source_node, target_node);
         }

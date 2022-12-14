@@ -36,14 +36,12 @@ fn iterate_nodes()
 #[test]
 fn iterate_edges()
 {
-    let input_array = [(0,1),(2,3)];
-    let g = Graph::from(input_array.clone());
+    let input_array = [(0,1),(2,3),(2,1)];
+    let g = Graph::from(input_array);
     let edges = g.edges().collect::<Vec<(Node,Node)>>();
-    for (i, (source, target)) in input_array.iter().enumerate() {
-        assert_eq!(g.get_value(edges[i].0), source);
-        assert_eq!(g.get_value(edges[i].1), target);
+    for (i, edge) in input_array.iter().enumerate() {
+        assert_eq!(g.get_value_edge(edges[i]), *edge);
     }
-
 }
 
 #[test]

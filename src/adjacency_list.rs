@@ -29,36 +29,36 @@ impl AdjancencyList {
     }
 
     pub fn nodes(&self) -> NodeIterator {
-        NodeIterator { list: &self, current_node_index: 0 }
+        NodeIterator { list: &self, node_index: 0 }
     }
 
     pub fn edges(&self) -> EdgeIterator {
-        EdgeIterator { list: &self, current_node_index: 0, current_neighbour_index: 0 }
+        EdgeIterator { list: &self, node_index: 0, neighbour_index: 0 }
     }
 }
 
 pub struct NodeIterator<'a> {
     list: &'a AdjancencyList,
-    current_node_index: usize
+    node_index: usize
 }
 
 impl<'a> Iterator for NodeIterator<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.list.node_exists(self.current_node_index) {
+        if !self.list.node_exists(self.node_index) {
             return None
         }
 
-        let ret = Some(self.current_node_index);
-        self.current_node_index += 1;
+        let ret = Some(self.node_index);
+        self.node_index += 1;
         ret
     }
 }
 
 pub struct EdgeIterator<'a> {
     list: &'a AdjancencyList,
-    current_node_index: usize,
-    current_neighbour_index: usize
+    node_index: usize,
+    neighbour_index: usize
 }
 
 impl Iterator for EdgeIterator<'_> {
@@ -70,23 +70,23 @@ impl Iterator for EdgeIterator<'_> {
         }
 
         let ret = Some((
-            self.current_node_index,
-            self.list.get_neighbours(self.current_node_index)[self.current_neighbour_index]
+            self.node_index,
+            self.list.get_neighbours(self.node_index)[self.neighbour_index]
         ));
 
-        self.current_neighbour_index += 1;
+        self.neighbour_index += 1;
         ret
     }
 }
 
 impl EdgeIterator<'_> {
     fn find_next_existing_edge(&mut self) -> bool {
-        while self.list.node_exists(self.current_node_index) {
-            if self.current_neighbour_index < self.list.get_neighbours(self.current_node_index).len() {
+        while self.list.node_exists(self.node_index) {
+            if self.neighbour_index < self.list.get_neighbours(self.node_index).len() {
                 return true;
             }
-            self.current_node_index += 1;
-            self.current_neighbour_index = 0;
+            self.node_index += 1;
+            self.neighbour_index = 0;
         }
         false
     }

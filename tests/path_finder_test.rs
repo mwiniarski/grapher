@@ -24,8 +24,7 @@ fn n<T: Eq>(graph: &Graph<T, Directed>, value: T) -> Node {
 #[test]
 fn find_shortest_path()
 {
-    let g = Graph::from
-        ([(0,1), (0,2), (2,3), (1,3), (1,4), (3,4)]);
+    let g = Graph::from([(0,1), (0,2), (2,3), (1,3), (1,4), (3,4)]);
 
     compare_results(&g, [0, 1, 4], 
         PathFinder::find_shortest_path(&g, 
