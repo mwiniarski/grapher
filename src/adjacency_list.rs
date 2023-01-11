@@ -3,6 +3,17 @@ pub struct AdjancencyList {
     list: Vec<Vec<usize>>
 }
 
+pub struct NodeIterator<'a> {
+    list: &'a AdjancencyList,
+    node_index: usize
+}
+
+pub struct EdgeIterator<'a> {
+    list: &'a AdjancencyList,
+    node_index: usize,
+    neighbour_index: usize
+}
+
 impl AdjancencyList {
     pub fn new() -> Self {
         AdjancencyList { list: Vec::new() }
@@ -37,10 +48,6 @@ impl AdjancencyList {
     }
 }
 
-pub struct NodeIterator<'a> {
-    list: &'a AdjancencyList,
-    node_index: usize
-}
 
 impl<'a> Iterator for NodeIterator<'a> {
     type Item = usize;
@@ -53,12 +60,6 @@ impl<'a> Iterator for NodeIterator<'a> {
         self.node_index += 1;
         ret
     }
-}
-
-pub struct EdgeIterator<'a> {
-    list: &'a AdjancencyList,
-    node_index: usize,
-    neighbour_index: usize
 }
 
 impl Iterator for EdgeIterator<'_> {

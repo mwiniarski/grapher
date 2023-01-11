@@ -30,8 +30,11 @@ pub trait GraphType {
     // Number of nodes
     fn len(&self) -> usize;
 
+    // Number of edges leaving the node
+    fn get_degree(&self, node: GraphNode) -> usize;
+
     // Get a vector of neighbouring nodes
-    fn get_neighbours(&self, node: GraphNode) -> Vec<GraphNode>;
+    fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator;
 
     fn new() -> Self;
 }

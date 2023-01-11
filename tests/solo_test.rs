@@ -1,5 +1,7 @@
 //use grapher::graph::{Graph};
 
+use std::{time::Instant, cmp::Ordering};
+
 
 #[test]
 fn test1() {
@@ -39,9 +41,40 @@ fn test2() {
     s.bark();
 }
 
+pub struct MyIterator {
+    index: usize,
+    max: usize
+}
+
+impl<'a> Iterator for MyIterator {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index += 1;
+        match self.index.cmp(&self.max) {
+            Ordering::Less => Some(self.index),
+            _ => None
+        }
+    }
+}
+
+impl MyIterator {
+    fn new(max: usize) -> Self {
+        MyIterator {index: 0, max: max }
+    }
+}
+
 #[test]
 fn test3() {
-    for i in 0..5 {
-        println!("{:?}", i);
-    }
+
+    const N: usize = 1000000;
+    let v = vec![1; N];
+
+    let mut time = Instant::now();
+    for i in v { let _ = i + 1; }
+    println!("Time passed: {:.2?}", time.elapsed());
+
+    time = Instant::now();
+    for i in MyIterator::new(N) { let _ = i + 1; }
+    println!("Time passed: {:.2?}", time.elapsed());
 }

@@ -3,27 +3,32 @@ use std::slice::Iter;
 use crate::adjacency_list;
 use crate::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
 
-pub struct Directed {
+pub struct Undirected {
     adjacency_list: adjacency_list::AdjancencyList,
 }
 
-impl GraphType for Directed {
+impl GraphType for Undirected {
     fn add_node(&mut self) -> GraphNode {
         self.adjacency_list.add_node();
         GraphNode {uid: self.adjacency_list.len() - 1}
     }
 
     fn add_edge(&mut self, source: GraphNode, target: GraphNode) {
-        self.adjacency_list.add_edge(source.uid, target.uid);
+        self.adjacency_list.add_edge(source.uid, target.uid);        
+        self.adjacency_list.add_edge(target.uid, source.uid);        
     }
 
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
-        GraphNodeIterator{
+        GraphNodeIterator {
             iterator: Box::new(
-                NeighbourIterator{
+                NeighbourIterator {
                     iterator: self.adjacency_list.get_neighbours(node.uid).iter() }
             )
         }
+    }
+
+    fn get_degree(&self, node: GraphNode) -> usize {
+        self.adjacency_list.get_neighbours(node.uid).len()
     }
 
     fn nodes(&self) -> GraphNodeIterator {
@@ -38,12 +43,8 @@ impl GraphType for Directed {
         self.adjacency_list.len()
     }
 
-    fn get_degree(&self, node: GraphNode) -> usize {
-        self.adjacency_list.get_neighbours(node.uid).len()
-    }
-
     fn new() -> Self {
-        Directed { 
+        Undirected { 
             adjacency_list: adjacency_list::AdjancencyList::new()
         }
     }

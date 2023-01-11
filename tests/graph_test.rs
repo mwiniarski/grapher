@@ -1,5 +1,5 @@
 // Need to 'use' an interface
-use grapher::graph::{Graph, Node};
+use grapher::graph::{Graph, Node, NodeIterator};
 
 #[test]
 fn debug_graph()
@@ -65,4 +65,15 @@ fn graph_has_correct_size()
 {
     let g = Graph::from([(1,2)]);
     assert_eq!(g.len(), 2);
+}
+
+#[test]
+fn get_neighbours()
+{
+    let g = Graph::from([(1u32,2), (1,3), (1,4)]);
+    let node = g.find_node_with_value(&1).expect("Node not found");
+    let mut iter: NodeIterator = g.get_neighbours(node);
+    assert_eq!(iter.next(), g.find_node_with_value(&2));
+    assert_eq!(iter.next(), g.find_node_with_value(&3));
+    assert_eq!(iter.next(), g.find_node_with_value(&4));
 }

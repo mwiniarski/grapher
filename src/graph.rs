@@ -3,6 +3,7 @@ use std::collections::hash_map::Entry::*;
 use std::{fmt, hash::Hash};
 use crate::directed::*;
 use crate::graph_trait::*;
+use crate::undirected::*;
 use std::iter::Iterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
@@ -75,11 +76,14 @@ impl<T, U: GraphType> Graph<T, U> {
     }
 
     // Get a vector of neighbouring nodes
-    pub fn get_neighbours(&self, node: Node) -> Vec<Node> {
-        self.graph.get_neighbours(GraphNode::from(node))
-            .iter()
-            .map(|x| Node { uid: x.uid })
-            .collect()
+    pub fn get_neighbours(&self, node: Node) -> NodeIterator {
+        NodeIterator {
+            iterator: self.graph.get_neighbours(GraphNode::from(node))
+        }
+    }
+
+    pub fn get_degree(&self, node: Node) -> usize {
+        self.graph.get_degree(GraphNode::from(node))
     }
 
     pub fn new() -> Self {
@@ -95,6 +99,17 @@ impl<T: Clone, U> Graph<T, U> {
     }
 }
 
+impl<T: PartialEq, U: GraphType> Graph<T, U> {
+    pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
+        for node in self.nodes() {
+            if self.get_value(node) == value {
+                return Some(node);
+            }
+        }
+        None
+    }
+}
+
 impl<T: fmt::Display, U: GraphType> Graph<T, U> {
     fn print(&self, pretty: bool) -> String {
 
@@ -104,7 +119,7 @@ impl<T: fmt::Display, U: GraphType> Graph<T, U> {
 
             for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
                 output.push_str(&self.get_value(neighbour).to_string());
-                if num_index < self.get_neighbours(node).len() - 1 {
+                if num_index < self.get_degree(node) - 1 {
                     output.push(',');
                 }
             }
@@ -150,40 +165,13 @@ impl<'a> Iterator for EdgeIterator<'a> {
 
 impl<T> Graph<T, Directed> {
     pub fn new_directed() -> Self {
-        Graph { graph: Directed::new(), values: Vec::new() }
+        Graph::new()
     }
 }
 
 impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T, Directed> {
     fn from(arr: [(T, T); N]) -> Self {
-        let mut map: HashMap<T, Node> = HashMap::new();
-        let mut graph = Graph::new_directed();
-
-        for (source, target) in arr {
-            let source_node: Node;
-            let target_node: Node;
-            if !map.contains_key(&source) {
-                let cloned_value = source.clone();
-                source_node = graph.add_node(source);
-                map.insert(cloned_value, source_node);
-            }
-            else {
-                source_node = map[&source];
-            }
-
-            if !map.contains_key(&target) {
-                let cloned_value = target.clone();
-                target_node = graph.add_node(target);
-                map.insert(cloned_value, target_node);
-            }
-            else {
-                target_node = map[&target];
-            }
-
-            graph.add_edge(source_node, target_node);
-        }
-
-        graph
+        Graph::from_directed(arr)
     }
 }
 
@@ -193,10 +181,14 @@ impl<T : Eq + Hash + Clone> Graph<T, Directed> {
     // O(N) time
     // O(unique vertex count) size
     pub fn from_vec(vec: Vec<(T,T)>) -> Self {
+        Graph::from_directed(vec)
+    }
+
+    fn from_directed<W : IntoIterator<Item = (T,T)>>(sth: W) -> Self {
         let mut map: HashMap<T, Node> = HashMap::new();
         let mut graph = Graph::new_directed();
 
-        for (source, target) in vec {
+        for (source, target) in sth {
 
             let source_node = match map.entry(source.clone()) {
                 Occupied(entry) => entry.get().clone(),
@@ -222,3 +214,50 @@ impl<T : Eq + Hash + Clone> Graph<T, Directed> {
         graph
     }
 }
+
+impl<T> Graph<T, Undirected> {
+    pub fn new_undirected() -> Self {
+        Graph { graph: Undirected::new(), values: Vec::new() }
+    }
+}
+
+impl<T : Eq + Hash + Clone> Graph<T, Undirected> {
+
+    // Constructs graph
+    // O(N) time
+    // O(unique vertex count) size
+    pub fn from_vec(vec: Vec<(T,T)>) -> Self {
+        Graph::from_undirected(vec)
+    }
+
+    fn from_undirected<W : IntoIterator<Item = (T,T)>>(sth: W) -> Self {
+        let mut map: HashMap<T, Node> = HashMap::new();
+        let mut graph = Graph::new_undirected();
+
+        for (source, target) in sth {
+
+            let source_node = match map.entry(source.clone()) {
+                Occupied(entry) => entry.get().clone(),
+                Vacant(entry) => {
+                    let node = graph.add_node(source);
+                    entry.insert(node);
+                    node
+                }
+            };
+
+            let target_node = match map.entry(target.clone()) {
+                Occupied(entry) => entry.get().clone(),
+                Vacant(entry) => {
+                    let node = graph.add_node(target);
+                    entry.insert(node);
+                    node
+                }
+            };
+
+            graph.add_edge(source_node, target_node);
+        }
+
+        graph
+    }
+}
+

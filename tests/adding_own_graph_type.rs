@@ -2,25 +2,27 @@
 //
 // 1. Import traits
 
+use std::iter;
+
 use grapher::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
 use grapher::graph::*;
 
 // 2. Define a new GraphType
 
 struct MyGraphType {
-    storage: Vec<Vec<GraphNode>>
+    storage: Vec<Vec<usize>>
 }
 
 // 3. Define iterators
 
 struct MyGraphNodeIterator<'a> {
     graph: &'a MyGraphType,
-    index: GraphNode
+    index: usize
 }
 
 struct MyGraphEdgeIterator<'a> {
     graph: &'a MyGraphType,
-    index: (GraphNode, GraphNode)
+    index: (usize, NeighbourIterator<'a>)
 }
 
 // 4. Implement the trait 
@@ -33,8 +35,8 @@ impl GraphType for MyGraphType {
         self.storage.push(Vec::new());
 
         for i in 0..new_index {
-            self.storage[i].push(GraphNode{uid:new_index});
-            self.storage[new_index].push(GraphNode{uid:i});
+            self.storage[i].push(new_index);
+            self.storage[new_index].push(i);
         }
         GraphNode { uid: new_index }
     }
@@ -44,19 +46,29 @@ impl GraphType for MyGraphType {
     }
 
     fn nodes(&self) -> GraphNodeIterator {
-        GraphNodeIterator { iterator: Box::new( MyGraphNodeIterator { index: GraphNode{uid:0}, graph: self }) }
+        GraphNodeIterator { iterator: Box::new( MyGraphNodeIterator { index: 0, graph: self }) }
     }
 
     fn edges(&self) -> GraphEdgeIterator {
-        GraphEdgeIterator { iterator: Box::new( MyGraphEdgeIterator { index: (GraphNode{uid:0}, GraphNode{uid:0}), graph: self }) }
+        GraphEdgeIterator { iterator: Box::new( MyGraphEdgeIterator { index: (0, NeighbourIterator{ iterator: Box::new(iter::empty::<&usize>()) }), graph: self }) }
     }
 
     fn len(&self) -> usize {
         self.storage.len()
     }
 
-    fn get_neighbours(&self, node: GraphNode) -> Vec<GraphNode> {
-        self.storage[node.uid].clone()
+    fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
+        GraphNodeIterator{ 
+            iterator: Box::new( 
+                NeighbourIterator{ 
+                    iterator: Box::new(self.storage[node.uid].iter())
+                }
+            )
+        }
+    }
+
+    fn get_degree(&self, node: GraphNode) -> usize {
+        self.storage[node.uid].len()
     }
 
     fn new() -> Self {
@@ -69,12 +81,12 @@ impl GraphType for MyGraphType {
 impl<'a> Iterator for MyGraphNodeIterator<'a> {
     type Item = GraphNode;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index.uid >= self.graph.len() {
+        if self.index >= self.graph.len() {
             return None
         }
 
-        let ret = Some(self.index);
-        self.index.uid += 1;
+        let ret = Some(GraphNode{uid:self.index});
+        self.index += 1;
         ret
     }
 }
@@ -82,31 +94,44 @@ impl<'a> Iterator for MyGraphNodeIterator<'a> {
 impl Iterator for MyGraphEdgeIterator<'_> {
     type Item = (GraphNode, GraphNode);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.find_next_existing_edge() {
-            return None;
+    fn next(&mut self) -> Option<Self::Item> { 
+        return match self.get_next_existing_edge() {
+            Some(target_node) => Some((GraphNode{uid:self.index.0}, target_node)),
+            None => None
         }
-
-        let ret = Some((
-            self.index.0,
-            self.graph.get_neighbours(self.index.0)[self.index.1.uid]
-        ));
-
-        self.index.1.uid += 1;
-        ret
     }
 }
 
 impl MyGraphEdgeIterator<'_> {
-    fn find_next_existing_edge(&mut self) -> bool {
-        while self.index.0.uid < self.graph.len() {
-            if self.index.1.uid < self.graph.get_neighbours(self.index.0).len() {
-                return true;
+    fn get_next_existing_edge(&mut self) -> Option<GraphNode> {
+        loop {
+            match self.index.1.next() {
+                Some(value) => return Some(value),
+                None => ()
+            };
+
+            self.index.0 += 1;
+            if self.index.0 < self.graph.len() {
+                return None;
             }
-            self.index.0.uid += 1;
-            self.index.1.uid = 0;
+            
+            self.index.1.iterator = Box::new(self.graph.storage[self.index.0].iter());
         }
-        false
+    }
+}
+
+pub struct NeighbourIterator<'a> {
+    iterator: Box<dyn Iterator<Item=&'a usize> + 'a>
+}
+
+impl<'a> Iterator for NeighbourIterator<'a> {
+    type Item = GraphNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.next() {
+            Some(index) => Some(GraphNode{uid:index.clone()}),
+            None => None,
+        }
     }
 }
 

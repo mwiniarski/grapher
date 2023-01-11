@@ -24,7 +24,7 @@ fn load_graph() -> std::io::Result<Graph<usize,Directed>> {
     }
 
     let time = Instant::now();
-    let g = Graph::from_vec(temp_vec);
+    let g = Graph::<usize, Directed>::from_vec(temp_vec);
     println!("Graph::from_vec : {:.2?}", time.elapsed());
     
     assert!(time.elapsed().as_millis() < 80);
@@ -50,7 +50,7 @@ fn performance_test1() {
     let edge_iteration_time = Instant::now();
     let mut i = 0;
     for node in graph.nodes() {
-        if graph.get_neighbours(node).len() == 0 && inversed_graph.get_neighbours(node).len() == 0 {
+        if graph.get_degree(node) == 0 && inversed_graph.get_degree(node) == 0 {
             i += 1;
         }
     }
