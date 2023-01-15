@@ -46,7 +46,7 @@ pub struct MyIterator {
     max: usize
 }
 
-impl<'a> Iterator for MyIterator {
+impl Iterator for MyIterator {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -77,4 +77,63 @@ fn test3() {
     time = Instant::now();
     for i in MyIterator::new(N) { let _ = i + 1; }
     println!("Time passed: {:.2?}", time.elapsed());
+}
+
+struct MyClass {
+    v: Vec<usize>
+}
+
+pub struct Wrapper {
+    item: usize
+}
+
+pub struct MyIterator2<'a> {
+    class: std::slice::Iter<'a, usize>
+}
+
+impl<'a> Iterator for MyIterator2<'a> {
+    type Item = Wrapper;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.class.next() {
+            Some(item) => Some(Wrapper{item:item.clone()}),
+            None => None
+        }
+    }
+}
+
+impl<'a> MyIterator2<'a> {
+    fn new(r: &'a MyClass) -> Self {
+        MyIterator2 { class: r.v.iter() }
+    }
+}
+
+#[test]
+fn test4() {
+    let m = MyClass{v:vec![1; 1000000]};
+    
+    let mut i = 0;
+    let mut time = Instant::now();
+    for v in MyIterator2::new(&m) {
+        i += v.item;
+    }
+    println!("Time passed: {:.2?}", time.elapsed());
+
+    time = Instant::now();
+    for v in m.v.iter() {
+        i += v;
+    }
+    println!("Time passed: {:.2?}", time.elapsed());
+}
+
+trait HasNew {
+    fn new() -> Self;
+}
+
+struct A;
+
+impl HasNew for A {
+    fn new() -> Self {
+        A{}
+    }
 }

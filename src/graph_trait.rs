@@ -36,5 +36,5 @@ pub trait GraphType {
     // Get a vector of neighbouring nodes
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator;
 
-    fn new() -> Self;
+    fn new() -> Self where Self:Sized;
 }

@@ -35,12 +35,12 @@ pub struct EdgeIterator<'a> {
     iterator: GraphEdgeIterator<'a>
 }
 
-pub struct Graph<T, U> {
-    graph: U,
+pub struct Graph<T> {
+    graph: Box<dyn GraphType>,
     values: Vec<T>
 }
 
-impl<T, U: GraphType> Graph<T, U> {
+impl<T> Graph<T> {
     // Create an unconnected node
     // O(1) amortized
     pub fn add_node(&mut self, value: T) -> Node {
@@ -85,13 +85,9 @@ impl<T, U: GraphType> Graph<T, U> {
     pub fn get_degree(&self, node: Node) -> usize {
         self.graph.get_degree(GraphNode::from(node))
     }
-
-    pub fn new() -> Self {
-        Graph { graph: U::new(), values: Vec::new() }
-    }
 }
 
-impl<T: Clone, U> Graph<T, U> {
+impl<T: Clone> Graph<T> {
     // Get value associated with both ends of the edge. Makes copies
     // O(1)
     pub fn get_value_edge(&self, edge: (Node, Node)) -> (T, T) {
@@ -99,7 +95,7 @@ impl<T: Clone, U> Graph<T, U> {
     }
 }
 
-impl<T: PartialEq, U: GraphType> Graph<T, U> {
+impl<T: PartialEq> Graph<T> {
     pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
         for node in self.nodes() {
             if self.get_value(node) == value {
@@ -110,7 +106,7 @@ impl<T: PartialEq, U: GraphType> Graph<T, U> {
     }
 }
 
-impl<T: fmt::Display, U: GraphType> Graph<T, U> {
+impl<T: fmt::Display> Graph<T> {
     fn print(&self, pretty: bool) -> String {
 
         let mut output = String::new();
@@ -129,13 +125,13 @@ impl<T: fmt::Display, U: GraphType> Graph<T, U> {
     }
 }
 
-impl<T: fmt::Display, U: GraphType> fmt::Display for Graph<T, U> {
+impl<T: fmt::Display> fmt::Display for Graph<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(true))
     }
 }
 
-impl<T: fmt::Display, U: GraphType> fmt::Debug for Graph<T, U> {
+impl<T: fmt::Display> fmt::Debug for Graph<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(false))
     }
@@ -163,24 +159,30 @@ impl<'a> Iterator for EdgeIterator<'a> {
     }
 }
 
-impl<T> Graph<T, Directed> {
+impl<T> Graph<T> {
     pub fn new_directed() -> Self {
-        Graph::new()
+        Graph { graph: Box::new(Directed::new()), values: Vec::new() }
     }
 }
 
-impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T, Directed> {
+impl<T> Graph<T> {
+    pub fn new<U:GraphType + 'static>() -> Self {
+        Graph { graph: Box::new(U::new()), values: Vec::new() }
+    }
+}
+
+impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T> {
     fn from(arr: [(T, T); N]) -> Self {
         Graph::from_directed(arr)
     }
 }
 
-impl<T : Eq + Hash + Clone> Graph<T, Directed> {
+impl<T : Eq + Hash + Clone> Graph<T> {
 
     // Constructs graph
     // O(N) time
     // O(unique vertex count) size
-    pub fn from_vec(vec: Vec<(T,T)>) -> Self {
+    pub fn from_vec_directed(vec: Vec<(T,T)>) -> Self {
         Graph::from_directed(vec)
     }
 
@@ -215,18 +217,18 @@ impl<T : Eq + Hash + Clone> Graph<T, Directed> {
     }
 }
 
-impl<T> Graph<T, Undirected> {
+impl<T> Graph<T> {
     pub fn new_undirected() -> Self {
-        Graph { graph: Undirected::new(), values: Vec::new() }
+        Graph { graph: Box::new(Undirected::new()), values: Vec::new() }
     }
 }
 
-impl<T : Eq + Hash + Clone> Graph<T, Undirected> {
+impl<T : Eq + Hash + Clone> Graph<T> {
 
     // Constructs graph
     // O(N) time
     // O(unique vertex count) size
-    pub fn from_vec(vec: Vec<(T,T)>) -> Self {
+    pub fn from_vec_undirected(vec: Vec<(T,T)>) -> Self {
         Graph::from_undirected(vec)
     }
 

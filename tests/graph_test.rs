@@ -47,7 +47,7 @@ fn iterate_edges()
 #[test]
 fn iterate_edges_empty_graph()
 {
-    let g: Graph<usize, _> = Graph::new_directed();
+    let g: Graph<usize> = Graph::new_directed();
     assert!(g.edges().next().is_none());
 }
 

@@ -3,10 +3,14 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Instant;
 
-use grapher::directed::Directed;
 use grapher::graph::*;
 
-fn load_graph() -> std::io::Result<Graph<usize,Directed>> {
+fn assert_time(time: &Instant, name: &str, limit_ms: u128) {
+    println!("{}: {:.2?} / {}ms", name, time.elapsed(), limit_ms);
+    assert!(time.elapsed().as_millis() < limit_ms);
+}
+
+fn load_graph() -> std::io::Result<Graph<usize>> {
     let file = File::open("tests/data/facebook_test_data.txt")?;
     let buf_reader = BufReader::new(file);
     let mut temp_vec = vec![];
@@ -24,10 +28,9 @@ fn load_graph() -> std::io::Result<Graph<usize,Directed>> {
     }
 
     let time = Instant::now();
-    let g = Graph::<usize, Directed>::from_vec(temp_vec);
-    println!("Graph::from_vec : {:.2?}", time.elapsed());
+    let g = Graph::<usize>::from_vec_directed(temp_vec);
     
-    assert!(time.elapsed().as_millis() < 80);
+    assert_time(&time, "Graph::from_vec", 80);
     Ok(g)
 }
 
@@ -44,8 +47,7 @@ fn performance_test1() {
     for (source, target) in graph.edges() {
         inversed_graph.add_edge(target, source);
     }
-    println!("Inversing graph: {:.2?}", graph_inverse_time.elapsed());
-    assert!(graph_inverse_time.elapsed().as_millis() < 20);
+    assert_time(&graph_inverse_time, "Inversing graph", 20);
 
     let edge_iteration_time = Instant::now();
     let mut i = 0;
@@ -54,8 +56,7 @@ fn performance_test1() {
             i += 1;
         }
     }
-    println!("Checking neighbours lengths for each node: {:.2?}", edge_iteration_time.elapsed());
-    assert!(edge_iteration_time.elapsed().as_millis() < 15);
+    assert_time(&edge_iteration_time, "Checking neighbours lengths for each node", 1);
 
     println!("Graph size: {}, useless nodes: {}, which is {:.2}%", graph.len(), i, i as f32 / 100.0f32);
     assert_eq!(i, 0, "There should be no useless nodes!");

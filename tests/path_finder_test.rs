@@ -1,8 +1,7 @@
-use grapher::directed::Directed;
 use grapher::graph::{Node, Graph};
 use grapher::path_finder::PathFinder;
 
-fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T, Directed>, values: [T; N], nodes: Option<Vec<Node>>) {
+fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T>, values: [T; N], nodes: Option<Vec<Node>>) {
     let nodes = nodes.unwrap();
     assert_eq!(values.len(), nodes.len());
 
@@ -12,7 +11,7 @@ fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T, Dir
 }
 
 // O(n) way to get the node with value
-fn n<T: Eq>(graph: &Graph<T, Directed>, value: T) -> Node {
+fn n<T: Eq>(graph: &Graph<T>, value: T) -> Node {
     for node in graph.nodes() {
         if *graph.get_value(node) == value {
             return node;

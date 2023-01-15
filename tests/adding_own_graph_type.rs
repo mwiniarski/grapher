@@ -138,7 +138,7 @@ impl<'a> Iterator for NeighbourIterator<'a> {
 #[test]
 fn its_possible_to_create_graph_and_use_methods()
 {
-    let mut graph: Graph<usize, MyGraphType> = Graph::new();
+    let mut graph: Graph<usize> = Graph::new::<MyGraphType>();
     graph.add_node(1);
     graph.add_node(2);
     graph.add_node(3);
