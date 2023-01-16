@@ -145,6 +145,6 @@ fn its_possible_to_create_graph_and_use_methods()
 
     let theoretical_edges = [(1,2), (1,3), (2,1), (2,3), (3,1), (3,2)];
     for (i, edge) in graph.edges().enumerate() {
-        assert_eq!(theoretical_edges[i], graph.get_value_edge(edge));
+        assert_eq!(theoretical_edges[i], graph.get_edge_values(edge));
     }
 }

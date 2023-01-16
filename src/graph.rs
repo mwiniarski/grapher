@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::*;
+use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
 use crate::directed::*;
 use crate::graph_trait::*;
@@ -64,12 +65,6 @@ impl<T> Graph<T> {
         EdgeIterator { iterator: self.graph.edges() }
     }
 
-    // Get value associated with node
-    // O(1)
-    pub fn get_value(&self, node: Node) -> &T {
-        &self.values[node.uid]
-    }
-
     // Number of nodes
     pub fn len(&self) -> usize {
         self.graph.len()
@@ -87,53 +82,37 @@ impl<T> Graph<T> {
     }
 }
 
-impl<T: Clone> Graph<T> {
-    // Get value associated with both ends of the edge. Makes copies
+impl<T: Copy> Graph<T> {
+    // Get tuple of values associated with edge
     // O(1)
-    pub fn get_value_edge(&self, edge: (Node, Node)) -> (T, T) {
-        (self.values[edge.0.uid].clone(), self.values[edge.1.uid].clone())
+    pub fn get_edge_values(&self, edge: (Node, Node)) -> (T, T) {
+        (self.values[edge.0.uid], self.values[edge.1.uid])
+    }
+}
+
+impl<T> Index<Node> for Graph<T> {
+    type Output = T;
+
+    fn index(&self, index: Node) -> &Self::Output {
+        &self.values[index.uid]
+    }
+}
+
+impl<T> IndexMut<Node> for Graph<T> {
+
+    fn index_mut(&mut self, index: Node) -> &mut Self::Output {
+        &mut self.values[index.uid]
     }
 }
 
 impl<T: PartialEq> Graph<T> {
     pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
         for node in self.nodes() {
-            if self.get_value(node) == value {
+            if &self[node] == value {
                 return Some(node);
             }
         }
         None
-    }
-}
-
-impl<T: fmt::Display> Graph<T> {
-    fn print(&self, pretty: bool) -> String {
-
-        let mut output = String::new();
-        for node in self.nodes() {
-            output.push_str(&format!("{}[", self.get_value(node)));
-
-            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
-                output.push_str(&self.get_value(neighbour).to_string());
-                if num_index < self.get_degree(node) - 1 {
-                    output.push(',');
-                }
-            }
-            output.push_str(&format!("]{}", if pretty { "\n" } else { "" }));
-        }
-        output
-    }
-}
-
-impl<T: fmt::Display> fmt::Display for Graph<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(true))
-    }
-}
-
-impl<T: fmt::Display> fmt::Debug for Graph<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(false))
     }
 }
 
@@ -159,15 +138,47 @@ impl<'a> Iterator for EdgeIterator<'a> {
     }
 }
 
-impl<T> Graph<T> {
-    pub fn new_directed() -> Self {
-        Graph { graph: Box::new(Directed::new()), values: Vec::new() }
+impl<T: fmt::Display> Graph<T> {
+    fn print(&self, pretty: bool) -> String {
+
+        let mut output = String::new();
+        for node in self.nodes() {
+            output.push_str(&format!("{}[", self[node]));
+
+            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
+                output.push_str(&self[neighbour].to_string());
+                if num_index < self.get_degree(node) - 1 {
+                    output.push(',');
+                }
+            }
+            output.push_str(&format!("]{}", if pretty { "\n" } else { "" }));
+        }
+        output
+    }
+}
+
+impl<T: fmt::Display> fmt::Display for Graph<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print(true))
+    }
+}
+
+impl<T: fmt::Display> fmt::Debug for Graph<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print(false))
     }
 }
 
 impl<T> Graph<T> {
     pub fn new<U:GraphType + 'static>() -> Self {
         Graph { graph: Box::new(U::new()), values: Vec::new() }
+    }
+}
+
+// Directed graph helpers
+impl<T> Graph<T> {
+    pub fn new_directed() -> Self {
+        Graph { graph: Box::new(Directed::new()), values: Vec::new() }
     }
 }
 

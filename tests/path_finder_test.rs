@@ -6,14 +6,14 @@ fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T>, va
     assert_eq!(values.len(), nodes.len());
 
     for (index, node) in nodes.iter().enumerate() {
-        assert_eq!(values[index], *graph.get_value(*node));
+        assert_eq!(values[index], graph[*node]);
     }
 }
 
 // O(n) way to get the node with value
 fn n<T: Eq>(graph: &Graph<T>, value: T) -> Node {
     for node in graph.nodes() {
-        if *graph.get_value(node) == value {
+        if graph[node] == value {
             return node;
         }
     }

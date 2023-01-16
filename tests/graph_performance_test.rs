@@ -41,7 +41,7 @@ fn performance_test1() {
     let graph_inverse_time = Instant::now();
     let mut inversed_graph = Graph::new_directed();
     for node in graph.nodes() {
-        inversed_graph.add_node(graph.get_value(node));
+        inversed_graph.add_node(graph[node]);
     }
     
     for (source, target) in graph.edges() {
