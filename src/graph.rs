@@ -184,7 +184,7 @@ impl<T> Graph<T> {
 
 impl<T : Eq + Hash + Clone, const N: usize> From<[(T, T); N]> for Graph<T> {
     fn from(arr: [(T, T); N]) -> Self {
-        Graph::from_directed(arr)
+        Graph::fill_graph_from_vec(Graph::new_directed(), arr)
     }
 }
 
@@ -194,12 +194,18 @@ impl<T : Eq + Hash + Clone> Graph<T> {
     // O(N) time
     // O(unique vertex count) size
     pub fn from_vec_directed(vec: Vec<(T,T)>) -> Self {
-        Graph::from_directed(vec)
+        Graph::fill_graph_from_vec(Graph::new_directed(), vec)
     }
 
-    fn from_directed<W : IntoIterator<Item = (T,T)>>(sth: W) -> Self {
+    // Constructs graph
+    // O(N) time
+    // O(unique vertex count) size
+    pub fn from_vec_undirected(vec: Vec<(T,T)>) -> Self {
+        Graph::fill_graph_from_vec(Graph::new_undirected(), vec)
+    }
+
+    fn fill_graph_from_vec<W : IntoIterator<Item = (T,T)>>(mut graph: Graph<T>, sth: W) -> Self {
         let mut map: HashMap<T, Node> = HashMap::new();
-        let mut graph = Graph::new_directed();
 
         for (source, target) in sth {
 
@@ -231,46 +237,6 @@ impl<T : Eq + Hash + Clone> Graph<T> {
 impl<T> Graph<T> {
     pub fn new_undirected() -> Self {
         Graph { graph: Box::new(Undirected::new()), values: Vec::new() }
-    }
-}
-
-impl<T : Eq + Hash + Clone> Graph<T> {
-
-    // Constructs graph
-    // O(N) time
-    // O(unique vertex count) size
-    pub fn from_vec_undirected(vec: Vec<(T,T)>) -> Self {
-        Graph::from_undirected(vec)
-    }
-
-    fn from_undirected<W : IntoIterator<Item = (T,T)>>(sth: W) -> Self {
-        let mut map: HashMap<T, Node> = HashMap::new();
-        let mut graph = Graph::new_undirected();
-
-        for (source, target) in sth {
-
-            let source_node = match map.entry(source.clone()) {
-                Occupied(entry) => entry.get().clone(),
-                Vacant(entry) => {
-                    let node = graph.add_node(source);
-                    entry.insert(node);
-                    node
-                }
-            };
-
-            let target_node = match map.entry(target.clone()) {
-                Occupied(entry) => entry.get().clone(),
-                Vacant(entry) => {
-                    let node = graph.add_node(target);
-                    entry.insert(node);
-                    node
-                }
-            };
-
-            graph.add_edge(source_node, target_node);
-        }
-
-        graph
     }
 }
 
