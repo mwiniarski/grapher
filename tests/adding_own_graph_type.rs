@@ -22,7 +22,7 @@ struct MyGraphNodeIterator<'a> {
 
 struct MyGraphEdgeIterator<'a> {
     graph: &'a MyGraphType,
-    index: (usize, NeighbourIterator<'a>)
+    index: (usize, Box<dyn Iterator<Item=&'a usize> + 'a>)
 }
 
 // 4. Implement the trait 
@@ -50,7 +50,7 @@ impl GraphType for MyGraphType {
     }
 
     fn edges(&self) -> GraphEdgeIterator {
-        GraphEdgeIterator { iterator: Box::new( MyGraphEdgeIterator { index: (0, NeighbourIterator{ iterator: Box::new(iter::empty::<&usize>()) }), graph: self }) }
+        GraphEdgeIterator { iterator: Box::new( MyGraphEdgeIterator { index: (0, Box::new(iter::empty::<&usize>()) ), graph: self }) }
     }
 
     fn len(&self) -> usize {
@@ -58,11 +58,11 @@ impl GraphType for MyGraphType {
     }
 
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
-        GraphNodeIterator{ 
-            iterator: Box::new( 
-                NeighbourIterator{ 
-                    iterator: Box::new(self.storage[node.uid].iter())
-                }
+        GraphNodeIterator{
+            iterator: Box::new(
+                self.storage[node.uid]
+                    .iter()
+                    .map(|index|GraphNode { uid: index.clone() })
             )
         }
     }
@@ -106,7 +106,7 @@ impl MyGraphEdgeIterator<'_> {
     fn get_next_existing_edge(&mut self) -> Option<GraphNode> {
         loop {
             match self.index.1.next() {
-                Some(value) => return Some(value),
+                Some(value) => return Some(GraphNode{uid:value.clone()}),
                 None => ()
             };
 
@@ -115,22 +115,7 @@ impl MyGraphEdgeIterator<'_> {
                 return None;
             }
             
-            self.index.1.iterator = Box::new(self.graph.storage[self.index.0].iter());
-        }
-    }
-}
-
-pub struct NeighbourIterator<'a> {
-    iterator: Box<dyn Iterator<Item=&'a usize> + 'a>
-}
-
-impl<'a> Iterator for NeighbourIterator<'a> {
-    type Item = GraphNode;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some(index) => Some(GraphNode{uid:index.clone()}),
-            None => None,
+            self.index.1 = Box::new(self.graph.storage[self.index.0].iter());
         }
     }
 }

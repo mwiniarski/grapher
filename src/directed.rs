@@ -1,5 +1,3 @@
-use std::slice::Iter;
-
 use crate::adjacency_list;
 use crate::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
 
@@ -20,18 +18,30 @@ impl GraphType for Directed {
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
         GraphNodeIterator{
             iterator: Box::new(
-                NeighbourIterator{
-                    iterator: self.adjacency_list.get_neighbours(node.uid).iter() }
+                self.adjacency_list
+                    .get_neighbours(node.uid)
+                    .iter()
+                    .map(|index| GraphNode { uid: index.clone() })
             )
         }
     }
 
     fn nodes(&self) -> GraphNodeIterator {
-        GraphNodeIterator{ iterator: Box::new( NodeIterator{ iterator: self.adjacency_list.nodes() } ) }
+        GraphNodeIterator {
+            iterator: Box::new(
+                self.adjacency_list
+                    .nodes()
+                    .map(|index| GraphNode { uid: index })
+        )}
     }
 
     fn edges(&self) -> GraphEdgeIterator {
-        GraphEdgeIterator { iterator: Box::new( EdgeIterator{ iterator: self.adjacency_list.edges() } ) }
+        GraphEdgeIterator {
+            iterator: Box::new(
+                self.adjacency_list
+                    .edges()
+                    .map(|(source, target)| (GraphNode{uid:source}, GraphNode{uid:target}))
+        )}
     }
 
     fn len(&self) -> usize {
@@ -45,54 +55,6 @@ impl GraphType for Directed {
     fn new() -> Self {
         Directed { 
             adjacency_list: adjacency_list::AdjancencyList::new()
-        }
-    }
-}
-
-pub struct NodeIterator<'a> {
-    iterator: adjacency_list::NodeIterator<'a>
-}
-
-impl<'a> Iterator for NodeIterator<'a> {
-    type Item = GraphNode;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some(index) => Some(GraphNode { uid: index }),
-            None => None
-        }
-    }
-}
-
-pub struct EdgeIterator<'a> {
-    iterator: adjacency_list::EdgeIterator<'a>
-}
-
-impl Iterator for EdgeIterator<'_> {
-    type Item = (GraphNode, GraphNode);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some((source, target)) => Some((
-                GraphNode { uid: source },
-                GraphNode { uid: target }
-            )),
-            None => None
-        }
-    }
-}
-
-pub struct NeighbourIterator<'a> {
-    iterator: Iter<'a, usize>
-}
-
-impl<'a> Iterator for NeighbourIterator<'a> {
-    type Item = GraphNode;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.next() {
-            Some(index) => Some(GraphNode { uid: *index }),
-            None => None
         }
     }
 }
