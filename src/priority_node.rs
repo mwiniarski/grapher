@@ -1,30 +1,32 @@
-use crate::graph::{*};
+use crate::graph::*;
 
-#[derive (Debug)]
-pub struct PriorityNode {
-    pub priority: usize,
+// Note: PriorityNode can use all {integer}s but cannot use {float}s
+// due to them implementing neither Ord nor Eq
+
+#[derive (Debug, Eq)]
+pub struct PriorityNode<W: Ord> {
+    pub priority: W,
     pub node: Node,
 }
 
-impl Ord for PriorityNode {
+impl<W: Ord> Ord for PriorityNode<W> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.priority.cmp(&self.priority)
     }
 }
 
-impl PartialOrd for PriorityNode {
+impl<W: Ord> PartialOrd for PriorityNode<W> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         other.priority.partial_cmp(&self.priority)
     }
 }
 
-impl Eq for PriorityNode {}
-
-impl PartialEq for PriorityNode {
+impl<W: Ord> PartialEq for PriorityNode<W> {
     fn eq(&self, other: &Self) -> bool {
         self.priority == other.priority
     }
 }
+
 
 #[test]
 fn test_priority_ordering() {
@@ -78,7 +80,3 @@ fn test_ascending_vs_descending_order_push() {
     }
     println!("Descending: {}", now1.elapsed().as_micros());
 }
-
-// for _ in 0..heap.len() {
-//     println!("POP: {:?}", heap.pop());
-//}

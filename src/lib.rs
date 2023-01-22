@@ -1,7 +1,8 @@
 mod priority_node;
-pub mod adjacency_list;
-pub mod directed;
-pub mod undirected;
+mod directed;
+mod undirected;
+mod adjacency_list;
+
 pub mod graph_trait;
 pub mod graph;
 pub mod path_finder;

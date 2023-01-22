@@ -4,12 +4,13 @@ use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
 use crate::directed::*;
 use crate::graph_trait::*;
+use crate::path_finder::PathFindable;
 use crate::undirected::*;
 use std::iter::Iterator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Node {
-    uid: usize
+    pub(crate) uid: usize
 }
 
 impl Node {
@@ -17,13 +18,13 @@ impl Node {
         Node { uid: std::usize::MAX }
     }
 
-    fn from(node: GraphNode) -> Self {
+    pub fn from(node: GraphNode) -> Self {
         Node { uid: node.uid }
     }
 }
 
 impl GraphNode {
-    fn from(node: Node) -> Self {
+    pub fn from(node: Node) -> Self {
         GraphNode { uid: node.uid }
     }
 }
@@ -120,10 +121,7 @@ impl<'a> Iterator for NodeIterator<'a> {
     type Item = Node;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.iterator.next() {
-            Some(node) => Some(Node::from(node)),
-            None => None
-        }
+        self.iterator.iterator.next().map(|node| (Node::from(node)))
     }
 }
 
@@ -131,10 +129,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
     type Item = (Node, Node);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iterator.iterator.next() {
-            Some((source, target)) => Some((Node::from(source), Node::from(target))),
-            None => None
-        }
+        self.iterator.iterator.next().map(|edge| (Node::from(edge.0), Node::from(edge.1)))
     }
 }
 
@@ -179,6 +174,12 @@ impl<T> Graph<T> {
 impl<T> Graph<T> {
     pub fn new_directed() -> Self {
         Graph { graph: Box::new(Directed::new()), values: Vec::new() }
+    }
+}
+
+impl<T> Graph<T> {
+    pub fn new_undirected() -> Self {
+        Graph { graph: Box::new(Undirected::new()), values: Vec::new() }
     }
 }
 
@@ -234,9 +235,16 @@ impl<T : Eq + Hash + Clone> Graph<T> {
     }
 }
 
-impl<T> Graph<T> {
-    pub fn new_undirected() -> Self {
-        Graph { graph: Box::new(Undirected::new()), values: Vec::new() }
+impl<'a, T> PathFindable<'a, usize> for Graph<T> {
+    fn nodes(&'a self) -> NodeIterator<'a> {
+        self.nodes()
+    }
+
+    fn get_neighbours(&'a self, n: Node) -> NodeIterator<'a> {
+        self.get_neighbours(n)
+    }
+
+    fn get_weight(&'a self) -> usize {
+        1
     }
 }
-

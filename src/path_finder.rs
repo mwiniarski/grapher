@@ -1,9 +1,17 @@
 use std::collections::HashMap;
+use num_traits;
 
-use crate::graph::{Graph, Node};
+use crate::graph::{Graph, Node, NodeIterator};
+
 use crate::priority_node;
 
 pub struct PathFinder;
+
+pub trait PathFindable<'a, W> {
+    fn nodes(&'a self) -> NodeIterator<'a>;
+    fn get_neighbours(&'a self, n: Node) -> NodeIterator<'a>;
+    fn get_weight(&'a self) -> W;
+}
 
 impl PathFinder {
 
@@ -14,18 +22,19 @@ impl PathFinder {
     /// # Panics
     /// Panics if either of nodes does not exist in the graph.
     ///
-    pub fn find_shortest_path<T>(graph: &Graph<T>, source: Node, target: Node) -> Option<Vec<Node>> {
+    pub fn find_shortest_path<'a, G: PathFindable<'a, Dist>, Dist>(graph: &'a G, source: Node, target: Node) -> Option<Vec<Node>> 
+        where Dist: num_traits::PrimInt {
 
         // Initialize state
-        let mut distance: HashMap<Node, usize> = HashMap::new();
+        let mut distance: HashMap<Node, Dist> = HashMap::new();
         let mut visited: HashMap<Node, bool> = HashMap::new();
         let mut previous: HashMap<Node, Option<Node>> = HashMap::new();
-        let mut queue:std::collections::BinaryHeap<priority_node::PriorityNode> = std::collections::BinaryHeap::new();
+        let mut queue:std::collections::BinaryHeap<priority_node::PriorityNode<Dist>> = std::collections::BinaryHeap::new();
 
-        queue.push(priority_node::PriorityNode{priority: 0, node: source});
+        queue.push(priority_node::PriorityNode{priority: Dist::zero(), node: source});
         let mut target_reached = false;
         for node in graph.nodes() {
-            distance.insert(node, std::usize::MAX);
+            distance.insert(node, Dist::max_value());
             previous.insert(node, None);
         }
 
@@ -44,7 +53,7 @@ impl PathFinder {
             // For every adjecent node
             for neighbour in graph.get_neighbours(curr_vertex.node) {
                 // Check if distance to current node + distance to that neighbour is lower than its saved distance from source
-                let dist_through_curr_vertex = curr_vertex.priority + 1 /* TODO: replace with weight */;
+                let dist_through_curr_vertex = curr_vertex.priority + graph.get_weight();
                 if  dist_through_curr_vertex < distance[&neighbour] {
 
                     // If yes then replace that distance and add to queue
@@ -67,11 +76,30 @@ impl PathFinder {
             return None
         }
 
+        // Count the size of return vec
+        let mut curr_node = target;
+        let mut count = 0;
+        loop {
+            // If there is a previous, continue to it - there always should be
+            match previous[&curr_node] {
+                Some(i) => {
+                    curr_node = i;
+                    count += 1;
+                },
+                None => {
+                    assert_eq!(curr_node, source);
+                }
+            }
+            if curr_node == source {
+                break;
+            }
+        }
+
         // Allocate a zero vector and iterate over it from behind
-        let mut ret = vec![Node::new(); distance[&target] + 1];
+        let mut ret = vec![Node::new(); count + 1];
 
         // let mut ret = vec![0; distance[&target] + 1];
-        let mut curr_node = target;
+        curr_node = target;
 
         for elem in ret.iter_mut().rev() {
             *elem = curr_node;
