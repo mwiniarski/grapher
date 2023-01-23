@@ -5,4 +5,5 @@ mod adjacency_list;
 
 pub mod graph_trait;
 pub mod graph;
+pub mod weighted_graph;
 pub mod path_finder;

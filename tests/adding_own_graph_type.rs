@@ -29,7 +29,7 @@ struct MyGraphEdgeIterator<'a> {
 //
 // MyGraph is a directed full graph, there exist two directed edges between every pair of nodes
 
-impl GraphType for MyGraphType {
+impl GraphType<u32> for MyGraphType {
     fn add_node(&mut self) -> GraphNode {
         let new_index = self.storage.len();
         self.storage.push(Vec::new());
@@ -41,7 +41,7 @@ impl GraphType for MyGraphType {
         GraphNode { uid: new_index }
     }
 
-    fn add_edge(&mut self, _source: GraphNode, _target: GraphNode) {
+    fn add_edge(&mut self, _: GraphNode, _: GraphNode, _: u32) {
         panic!("Add edge can't be used for this graph")
     }
 

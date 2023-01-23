@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use num_traits;
 
-use crate::graph::{Graph, Node, NodeIterator};
+use crate::graph::{Node, NodeIterator};
 
 use crate::priority_node;
 
@@ -9,8 +9,10 @@ pub struct PathFinder;
 
 pub trait PathFindable<'a, W> {
     fn nodes(&'a self) -> NodeIterator<'a>;
-    fn get_neighbours(&'a self, n: Node) -> NodeIterator<'a>;
-    fn get_weight(&'a self) -> W;
+
+    // Iterator over neighbours of the node that returns a tuple of neighbouring node and 
+    // weight between current node and it's neighbour
+    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a>;
 }
 
 impl PathFinder {
@@ -53,20 +55,20 @@ impl PathFinder {
             // For every adjecent node
             for neighbour in graph.get_neighbours(curr_vertex.node) {
                 // Check if distance to current node + distance to that neighbour is lower than its saved distance from source
-                let dist_through_curr_vertex = curr_vertex.priority + graph.get_weight();
-                if  dist_through_curr_vertex < distance[&neighbour] {
+                let dist_through_curr_vertex = curr_vertex.priority + neighbour.1;
+                if  dist_through_curr_vertex < distance[&neighbour.0] {
 
                     // If yes then replace that distance and add to queue
-                    distance.insert(neighbour, dist_through_curr_vertex);
-                    previous.insert(neighbour, Some(curr_vertex.node));
+                    distance.insert(neighbour.0, dist_through_curr_vertex);
+                    previous.insert(neighbour.0, Some(curr_vertex.node));
 
                     // Finding the target in queue finishes the algorithm
-                    if neighbour == target {
+                    if neighbour.0 == target {
                         target_reached = true;
                         break 'outer;
                     }
 
-                    queue.push(priority_node::PriorityNode{ priority: dist_through_curr_vertex, node: neighbour });
+                    queue.push(priority_node::PriorityNode{ priority: dist_through_curr_vertex, node: neighbour.0 });
                 }
             }
         }
@@ -126,15 +128,15 @@ impl PathFinder {
     /// Panics if either of nodes does not exist in the graph or
     /// they are the same node.
     ///
-    pub fn find_all_paths<T>(graph: &Graph<T>, source: Node, target: Node) -> Vec<Vec<Node>> {
+    pub fn find_all_paths<'a, G: PathFindable<'a, Dist>, Dist>(graph: &'a G, source: Node, target: Node) -> Vec<Vec<Node>> {
         let mut all_paths: Vec<Vec<Node>> = Vec::new();
         let mut current_path: Vec<Node> = vec![source];
         PathFinder::find_paths(graph, &mut all_paths, &mut current_path, target);
         all_paths
     }
 
-    fn find_paths<T>(
-        graph: &Graph<T>,
+    fn find_paths<'a, G: PathFindable<'a, Dist>, Dist>(
+        graph: &'a G,
         all_paths: &mut Vec<Vec<Node>>,
         current_path: &mut Vec<Node>,
         target: Node,
@@ -142,10 +144,10 @@ impl PathFinder {
         let current_node = *current_path.last().unwrap(); // TODO: check this
         for n in graph.get_neighbours(current_node) {
 
-            if n == target {
+            if n.0 == target {
 
                 let mut cloned_path = current_path.clone();
-                cloned_path.push(n);
+                cloned_path.push(n.0);
                 all_paths.push(cloned_path);
 
             } else {
@@ -154,11 +156,11 @@ impl PathFinder {
                 // TODO: optimize with color map (bool vector)
                 if current_path
                         .iter()
-                        .find(|visited_node| n == **visited_node)
+                        .find(|visited_node| n.0 == **visited_node)
                         .is_none() {
 
                     // Go deeper
-                    current_path.push(n);
+                    current_path.push(n.0);
                     PathFinder::find_paths(graph, all_paths, current_path, target);
                     current_path.pop();
                 }

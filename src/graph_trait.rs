@@ -4,6 +4,12 @@ pub struct GraphNode {
     pub uid: usize
 }
 
+pub struct GraphEdge {
+    pub uid: usize,
+    pub source: usize,
+    pub target: usize
+}
+
 pub struct GraphNodeIterator<'a> {
     pub iterator: Box<dyn Iterator<Item=GraphNode> + 'a>
 }
@@ -12,14 +18,14 @@ pub struct GraphEdgeIterator<'a> {
     pub iterator: Box<dyn Iterator<Item = (GraphNode,GraphNode)> + 'a>
 }
 
-pub trait GraphType {
+pub trait GraphType<Idx> {
     // Add a new node
     // O(1)
     fn add_node(&mut self) -> GraphNode;
     
     // Add edge between two existing nodes
     // O(1)
-    fn add_edge(&mut self, source: GraphNode, target: GraphNode);
+    fn add_edge(&mut self, source: GraphNode, target: GraphNode, edge_index: Idx);
 
     // Iterate over all nodes
     fn nodes(&self) -> GraphNodeIterator;

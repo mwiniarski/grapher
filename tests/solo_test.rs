@@ -1,7 +1,40 @@
-//use grapher::graph::{Graph};
+#![allow(dead_code, unused)]
+use grapher::graph::Node;
 
-use std::{time::Instant, cmp::Ordering};
+use std::{time::Instant, cmp::Ordering, marker::PhantomData};
 
+trait Functions {
+    fn func1(&self);
+}
+
+struct B {}
+
+impl B {
+    fn func2(&self) {}
+}
+
+impl Functions for B {
+    fn func1(&self) {}
+}
+
+fn b_func<T: Functions>(_t: T) {
+    //t.func2();
+}
+
+#[test]
+fn test_trait() 
+{
+    let b = B{};
+    b.func1();
+    b.func2();
+    b_func(b);
+}
+
+#[test]
+fn test_node() 
+{
+    let _n = Node::new();
+}
 
 #[test]
 fn test1() {
@@ -136,4 +169,104 @@ impl HasNew for A {
     fn new() -> Self {
         A{}
     }
+}
+
+fn empty_f() {}
+fn empty_with_empty(_: EmptyType) {}
+
+#[test]
+fn empty_func()
+{
+    let mut time = Instant::now();
+    for _i in 0..1000000 {
+        empty_f();
+    }
+    println!("Time passed: {:.2?}", time.elapsed());
+
+    time = Instant::now();
+    for _i in 0..1000000 {
+        ()//empty_f();
+    }
+    println!("Time passed: {:.2?}", time.elapsed());
+
+    time = Instant::now();
+    for _i in 0..1000000 {
+        empty_with_empty(EmptyType{});
+    }
+    println!("Time passed: {:.2?}", time.elapsed());
+}
+
+#[test]
+fn option_size() 
+{
+    println!("{:?}", core::mem::size_of::<Option<i32>>());
+    println!("{:?}", core::mem::size_of::<Option<&i32>>());
+    println!("{:?}", core::mem::size_of::<i32>());
+    println!("{:?}", core::mem::size_of::<&i32>());
+
+    println!("{:?}", core::mem::size_of::<Option<String>>());
+    println!("{:?}", core::mem::size_of::<Option<&String>>());
+    println!("{:?}", core::mem::size_of::<String>());
+    println!("{:?}", core::mem::size_of::<&String>());
+
+    println!("{:?}", core::mem::size_of::<Option<EmptyType>>());
+    println!("{:?}", core::mem::size_of::<Option<&EmptyType>>());
+    println!("{:?}", core::mem::size_of::<EmptyType>());
+    println!("{:?}", core::mem::size_of::<&EmptyType>());
+    println!("{:?}", core::mem::size_of::<[();100]>());
+}
+
+struct EmptyType {}
+
+struct Weighted<W> {
+    w: Option<W>
+}
+impl<W> Weight<W> for Weighted<W> {
+    fn get(&self) -> &W {
+        self.w.as_ref().unwrap()
+    } 
+}
+impl<W> Weighted<W> {
+    fn new() -> Self {
+        Weighted { w: None }
+    }
+}
+
+struct Unweighted {}
+impl<W> Weight<W> for Unweighted {
+    fn get(&self) -> &W {
+        panic!("Bad get")
+    } 
+}
+
+trait Weight<W> {
+    fn get(&self) -> &W;
+}
+
+struct SomeStruct<T, W> {
+    _b: Vec<T>,
+    _a: Box<dyn Weight<W>>
+}
+
+impl<T, W: 'static> SomeStruct<T, W> {
+    fn f() { println!("A"); }
+
+    fn new_unweighted() -> Self {
+        SomeStruct { _b: Vec::new(), _a: Box::new(Unweighted{}) }
+    }
+
+    fn new_weighted() -> Self {
+        SomeStruct { _b: Vec::new(), _a: Box::new(Weighted::new()) }
+    }
+
+    fn get_weight(&self) -> &W {
+        self._a.get()
+    }
+}
+
+
+#[test]
+fn traits()
+{
+    let s: SomeStruct<usize, usize> = SomeStruct::new_unweighted();
 }

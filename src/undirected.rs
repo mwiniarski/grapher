@@ -1,19 +1,19 @@
 use crate::adjacency_list;
 use crate::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
 
-pub struct Undirected {
-    adjacency_list: adjacency_list::AdjancencyList,
+pub struct Undirected<Idx> {
+    adjacency_list: adjacency_list::AdjancencyList<Idx>
 }
 
-impl GraphType for Undirected {
+impl<Idx> GraphType<Idx> for Undirected<Idx> where Idx: num_traits::Unsigned + num_traits::NumAssign + Copy {
     fn add_node(&mut self) -> GraphNode {
         self.adjacency_list.add_node();
         GraphNode {uid: self.adjacency_list.len() - 1}
     }
 
-    fn add_edge(&mut self, source: GraphNode, target: GraphNode) {
-        self.adjacency_list.add_edge(source.uid, target.uid);        
-        self.adjacency_list.add_edge(target.uid, source.uid);        
+    fn add_edge(&mut self, source: GraphNode, target: GraphNode, edge_index: Idx) {
+        self.adjacency_list.add_edge(source.uid, target.uid, edge_index);
+        self.adjacency_list.add_edge(target.uid, source.uid, edge_index);
     }
 
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
@@ -22,7 +22,7 @@ impl GraphType for Undirected {
                 self.adjacency_list
                     .get_neighbours(node.uid)
                     .iter()
-                    .map(|index| GraphNode { uid: index.clone() })
+                    .map(|conn| GraphNode { uid: conn.node_index.clone() })
             )
         }
     }

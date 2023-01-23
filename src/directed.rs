@@ -1,18 +1,18 @@
 use crate::adjacency_list;
 use crate::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
 
-pub struct Directed {
-    adjacency_list: adjacency_list::AdjancencyList,
+pub struct Directed<Idx> {
+    adjacency_list: adjacency_list::AdjancencyList<Idx>,
 }
 
-impl GraphType for Directed {
+impl<Idx> GraphType<Idx> for Directed<Idx> {
     fn add_node(&mut self) -> GraphNode {
         self.adjacency_list.add_node();
         GraphNode {uid: self.adjacency_list.len() - 1}
     }
 
-    fn add_edge(&mut self, source: GraphNode, target: GraphNode) {
-        self.adjacency_list.add_edge(source.uid, target.uid);
+    fn add_edge(&mut self, source: GraphNode, target: GraphNode, edge_index: Idx) {
+        self.adjacency_list.add_edge(source.uid, target.uid, edge_index)
     }
 
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
@@ -21,7 +21,7 @@ impl GraphType for Directed {
                 self.adjacency_list
                     .get_neighbours(node.uid)
                     .iter()
-                    .map(|index| GraphNode { uid: index.clone() })
+                    .map(|conn| GraphNode { uid: conn.node_index.clone() })
             )
         }
     }
