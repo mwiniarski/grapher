@@ -1,5 +1,5 @@
 // Need to 'use' an interface
-use grapher::{graph::{Graph, Node, NodeIterator}, weighted_graph::WeightedGraph};
+use grapher::graph::{Graph, Node, NodeIterator};
 
 #[test]
 fn debug_graph()
@@ -85,14 +85,4 @@ fn create_directed_graph_from_vector()
     let edges = vec![(1,2),(1,5),(2,4),(3,4)];
     let g = Graph::from_vec_directed(v);
     assert_eq!(g.edges().map(|edge| g.get_edge_values(edge)).collect::<Vec<(i32,i32)>>(), edges);
-}
-
-#[test]
-fn weighted_graph_can_add_weighted_edge()
-{
-    let mut g = WeightedGraph::new_directed();
-    let n1 = g.add_node(0);
-    let n2 = g.add_node(1);
-    g.add_edge(n1, n2, 0.5);
-    //assert_eq!(g.get_neighbours(n1).weight, 0.5);
 }

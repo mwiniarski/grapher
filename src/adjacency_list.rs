@@ -1,24 +1,24 @@
-pub struct Connection<EdgeIndex> {
+pub struct Connection {
     pub node_index: usize,
-    pub edge_index: EdgeIndex
+    pub edge_index: usize
 }
 
-pub struct AdjancencyList<EdgeIndex> {
-    list: Vec<Vec<Connection<EdgeIndex>>>
+pub struct AdjancencyList {
+    list: Vec<Vec<Connection>>
 }
 
-pub struct NodeIterator<'a, EdgeIndex> {
-    list: &'a AdjancencyList<EdgeIndex>,
+pub struct NodeIterator<'a> {
+    list: &'a AdjancencyList,
     node_index: usize
 }
 
-pub struct EdgeIterator<'a, EdgeIndex> {
-    list: &'a AdjancencyList<EdgeIndex>,
+pub struct EdgeIterator<'a> {
+    list: &'a AdjancencyList,
     node_index: usize,
     neighbour_index: usize
 }
 
-impl<EdgeIndex> AdjancencyList<EdgeIndex> {
+impl AdjancencyList {
     pub fn new() -> Self {
         AdjancencyList { list: Vec::new() }
     }
@@ -27,11 +27,11 @@ impl<EdgeIndex> AdjancencyList<EdgeIndex> {
         self.list.push(Vec::new());
     }
 
-    pub fn add_edge(&mut self, source: usize, target: usize, edge_index: EdgeIndex) {
+    pub fn add_edge(&mut self, source: usize, target: usize, edge_index: usize) {
         self.list[source].push(Connection{node_index: target, edge_index: edge_index});
     }
 
-    pub fn get_neighbours(&self, node: usize) -> &Vec<Connection<EdgeIndex>> {
+    pub fn get_neighbours(&self, node: usize) -> &Vec<Connection> {
         &self.list[node]
     }
 
@@ -43,17 +43,17 @@ impl<EdgeIndex> AdjancencyList<EdgeIndex> {
         self.list.len()
     }
 
-    pub fn nodes(&self) -> NodeIterator<EdgeIndex> {
+    pub fn nodes(&self) -> NodeIterator {
         NodeIterator { list: &self, node_index: 0 }
     }
 
-    pub fn edges(&self) -> EdgeIterator<EdgeIndex> {
+    pub fn edges(&self) -> EdgeIterator {
         EdgeIterator { list: &self, node_index: 0, neighbour_index: 0 }
     }
 }
 
 
-impl<'a, EdgeIndex> Iterator for NodeIterator<'a, EdgeIndex> {
+impl<'a> Iterator for NodeIterator<'a> {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
         if !self.list.node_exists(self.node_index) {
@@ -66,7 +66,7 @@ impl<'a, EdgeIndex> Iterator for NodeIterator<'a, EdgeIndex> {
     }
 }
 
-impl<EdgeIndex> Iterator for EdgeIterator<'_, EdgeIndex> {
+impl Iterator for EdgeIterator<'_> {
     type Item = (usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -84,7 +84,7 @@ impl<EdgeIndex> Iterator for EdgeIterator<'_, EdgeIndex> {
     }
 }
 
-impl<EdgeIndex> EdgeIterator<'_, EdgeIndex> {
+impl EdgeIterator<'_> {
     fn find_next_existing_edge(&mut self) -> bool {
         while self.list.node_exists(self.node_index) {
             if self.neighbour_index < self.list.get_neighbours(self.node_index).len() {

@@ -1,18 +1,16 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash, fmt::Debug};
 use num_traits;
-
-use crate::graph::{Node, NodeIterator};
 
 use crate::priority_node;
 
 pub struct PathFinder;
 
-pub trait PathFindable<'a, W> {
-    fn nodes(&'a self) -> NodeIterator<'a>;
+pub trait PathFindable<'a, Node, Dist> {
+    fn nodes(&'a self) -> Box<dyn Iterator<Item=Node> + 'a>;
 
     // Iterator over neighbours of the node that returns a tuple of neighbouring node and 
     // weight between current node and it's neighbour
-    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a>;
+    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, Dist)> + 'a>;
 }
 
 impl PathFinder {
@@ -24,14 +22,14 @@ impl PathFinder {
     /// # Panics
     /// Panics if either of nodes does not exist in the graph.
     ///
-    pub fn find_shortest_path<'a, G: PathFindable<'a, Dist>, Dist>(graph: &'a G, source: Node, target: Node) -> Option<Vec<Node>> 
+    pub fn find_shortest_path<'a, Dist, Node: Eq + Hash + Debug + Copy + PartialEq, G: PathFindable<'a, Node, Dist>>(graph: &'a G, source: Node, target: Node) -> Option<Vec<Node>> 
         where Dist: num_traits::PrimInt {
 
         // Initialize state
         let mut distance: HashMap<Node, Dist> = HashMap::new();
         let mut visited: HashMap<Node, bool> = HashMap::new();
         let mut previous: HashMap<Node, Option<Node>> = HashMap::new();
-        let mut queue:std::collections::BinaryHeap<priority_node::PriorityNode<Dist>> = std::collections::BinaryHeap::new();
+        let mut queue:std::collections::BinaryHeap<priority_node::PriorityNode<Dist, Node>> = std::collections::BinaryHeap::new();
 
         queue.push(priority_node::PriorityNode{priority: Dist::zero(), node: source});
         let mut target_reached = false;
@@ -98,7 +96,7 @@ impl PathFinder {
         }
 
         // Allocate a zero vector and iterate over it from behind
-        let mut ret = vec![Node::new(); count + 1];
+        let mut ret = vec![source; count + 1];
 
         // let mut ret = vec![0; distance[&target] + 1];
         curr_node = target;
@@ -128,14 +126,14 @@ impl PathFinder {
     /// Panics if either of nodes does not exist in the graph or
     /// they are the same node.
     ///
-    pub fn find_all_paths<'a, G: PathFindable<'a, Dist>, Dist>(graph: &'a G, source: Node, target: Node) -> Vec<Vec<Node>> {
+    pub fn find_all_paths<'a, Node: PartialEq + Copy, Dist, G: PathFindable<'a, Node, Dist>>(graph: &'a G, source: Node, target: Node) -> Vec<Vec<Node>> {
         let mut all_paths: Vec<Vec<Node>> = Vec::new();
         let mut current_path: Vec<Node> = vec![source];
         PathFinder::find_paths(graph, &mut all_paths, &mut current_path, target);
         all_paths
     }
 
-    fn find_paths<'a, G: PathFindable<'a, Dist>, Dist>(
+    fn find_paths<'a, Node: PartialEq + Copy, Dist, G: PathFindable<'a, Node, Dist>>(
         graph: &'a G,
         all_paths: &mut Vec<Vec<Node>>,
         current_path: &mut Vec<Node>,

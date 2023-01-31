@@ -29,7 +29,7 @@ struct MyGraphEdgeIterator<'a> {
 //
 // MyGraph is a directed full graph, there exist two directed edges between every pair of nodes
 
-impl GraphType<u32> for MyGraphType {
+impl GraphType for MyGraphType {
     fn add_node(&mut self) -> GraphNode {
         let new_index = self.storage.len();
         self.storage.push(Vec::new());
@@ -38,10 +38,10 @@ impl GraphType<u32> for MyGraphType {
             self.storage[i].push(new_index);
             self.storage[new_index].push(i);
         }
-        GraphNode { uid: new_index }
+        new_index
     }
 
-    fn add_edge(&mut self, _: GraphNode, _: GraphNode, _: u32) {
+    fn add_edge(&mut self, _: GraphNode, _: GraphNode, _: usize) {
         panic!("Add edge can't be used for this graph")
     }
 
@@ -60,15 +60,15 @@ impl GraphType<u32> for MyGraphType {
     fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
         GraphNodeIterator{
             iterator: Box::new(
-                self.storage[node.uid]
+                self.storage[node]
                     .iter()
-                    .map(|index|GraphNode { uid: index.clone() })
+                    .map(|index| index.clone() )
             )
         }
     }
 
     fn get_degree(&self, node: GraphNode) -> usize {
-        self.storage[node.uid].len()
+        self.storage[node].len()
     }
 
     fn new() -> Self {
@@ -85,7 +85,7 @@ impl<'a> Iterator for MyGraphNodeIterator<'a> {
             return None
         }
 
-        let ret = Some(GraphNode{uid:self.index});
+        let ret = Some(self.index);
         self.index += 1;
         ret
     }
@@ -96,7 +96,7 @@ impl Iterator for MyGraphEdgeIterator<'_> {
 
     fn next(&mut self) -> Option<Self::Item> { 
         return match self.get_next_existing_edge() {
-            Some(target_node) => Some((GraphNode{uid:self.index.0}, target_node)),
+            Some(target_node) => Some((self.index.0, target_node)),
             None => None
         }
     }
@@ -106,7 +106,7 @@ impl MyGraphEdgeIterator<'_> {
     fn get_next_existing_edge(&mut self) -> Option<GraphNode> {
         loop {
             match self.index.1.next() {
-                Some(value) => return Some(GraphNode{uid:value.clone()}),
+                Some(value) => return Some(value.clone()),
                 None => ()
             };
 

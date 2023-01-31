@@ -2,41 +2,48 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry::*;
 use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
-use num_traits::NumAssign;
 
-use crate::graph::{Node, Graph, NodeIterator, EdgeIterator};
+use crate::directed::Directed;
+use crate::graph::{Node, NodeIterator, EdgeIterator};
 use crate::graph_trait::*;
 use crate::path_finder::PathFindable;
+use crate::undirected::Undirected;
 use std::iter::Iterator;
 
 
-pub struct WeightedGraph<T, W, Idx = u32> where Idx: num_traits::Unsigned + num_traits::NumAssign + Copy {
-    graph: Graph<T, Idx>,
-    weights: Vec<W>
+pub struct WeightedGraph<T, W> {
+    graph: Box<dyn GraphType>,
+    values: Vec<T>,
+    weights: Vec<W>,
+    edge_count: usize
 }
 
-impl<T, W, Idx> WeightedGraph<T, W, Idx> where Idx: num_traits::Unsigned + NumAssign + Copy {
+impl<T, W> WeightedGraph<T, W> {
     // Create an unconnected node
     // O(1) amortized
     pub fn add_node(&mut self, value: T) -> Node {
-        self.graph.add_node(value)
+        self.values.push(value);
+        Node::from(self.graph.add_node())
     }
 
     // Add edge between two existing nodes
     // O(1)
     pub fn add_edge(&mut self, source: Node, target: Node, weight: W) {
-        self.graph.add_edge(source, target);
+        self.graph.add_edge(
+            source.uid,
+            target.uid,
+            self.edge_count.clone());
         self.weights.push(weight);
     }
 
     // Iterate over all nodes
     pub fn nodes(&self) -> NodeIterator {
-        self.graph.nodes()
+        NodeIterator { iterator: self.graph.nodes() }
     }
 
     // Iterate over all edges
     pub fn edges(&self) -> EdgeIterator {
-        self.graph.edges()
+        EdgeIterator { iterator: self.graph.edges() }
     }
 
     // Number of nodes
@@ -46,11 +53,19 @@ impl<T, W, Idx> WeightedGraph<T, W, Idx> where Idx: num_traits::Unsigned + NumAs
 
     // Get a vector of neighbouring nodes
     pub fn get_neighbours(&self, node: Node) -> NodeIterator {
-        self.graph.get_neighbours(node)
+        NodeIterator { iterator: self.graph.get_neighbours(node.uid) }
     }
 
     pub fn get_degree(&self, node: Node) -> usize {
-        self.graph.get_degree(node)
+        self.graph.get_degree(node.uid)
+    }
+}
+
+impl<T: Copy, W> WeightedGraph<T, W> {
+    // Get tuple of values associated with edge
+    // O(1)
+    pub fn get_edge_values(&self, edge: (Node, Node)) -> (T, T) {
+        (self.values[edge.0.uid], self.values[edge.1.uid])
     }
 }
 
@@ -58,14 +73,14 @@ impl<T, W> Index<Node> for WeightedGraph<T, W> {
     type Output = T;
 
     fn index(&self, index: Node) -> &Self::Output {
-        &self.graph[index]
+        &self.values[index.uid]
     }
 }
 
 impl<T, W> IndexMut<Node> for WeightedGraph<T, W> {
 
     fn index_mut(&mut self, index: Node) -> &mut Self::Output {
-        &mut self.graph[index]
+        &mut self.values[index.uid]
     }
 }
 
@@ -111,16 +126,16 @@ impl<T: fmt::Display, W> fmt::Debug for WeightedGraph<T, W> {
     }
 }
 
-impl<T, W, Idx> WeightedGraph<T, W, Idx> where Idx: num_traits::Unsigned + num_traits::NumAssign + Copy {
-    pub fn new<U: GraphType<Idx> + 'static>() -> Self {
-        WeightedGraph { graph: Graph::new::<U>(), weights: Vec::new() }
+impl<T, W> WeightedGraph<T, W> {
+    pub fn new<U: GraphType + 'static>() -> Self {
+        WeightedGraph { graph: Box::new(U::new()), values: Vec::new(), weights: Vec::new(), edge_count: 0 }
     }
 }
 
 // Directed graph helpers
 impl<T, W> WeightedGraph<T, W> {
     pub fn new_directed() -> Self {
-        WeightedGraph { graph: Graph::new_directed(), weights: Vec::new() }
+        WeightedGraph { graph: Box::new(Directed::new()), values: Vec::new(), weights: Vec::new(), edge_count: 0 }
     }
 }
 
@@ -178,16 +193,16 @@ impl<T : Eq + Hash + Clone, W> WeightedGraph<T, W> {
 
 impl<T, W> WeightedGraph<T, W> {
     pub fn new_undirected() -> Self {
-        WeightedGraph { graph: Graph::new_undirected(), weights: Vec::new() }
+        WeightedGraph { graph: Box::new(Undirected::new()), values: Vec::new(), weights: Vec::new(), edge_count: 0 }
     }
 }
 
-impl<'a, T, W: num_traits::PrimInt> PathFindable<'a, W> for WeightedGraph<T, W> {
-    fn nodes(&'a self) -> NodeIterator<'a> {
-        self.nodes()
+impl<'a, T, W> PathFindable<'a, Node, usize> for WeightedGraph<T, W> {
+    fn nodes(&'a self) -> Box<dyn Iterator<Item=Node> + 'a> {
+        Box::new(self.nodes())
     }
 
-    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a> {
-        Box::new(self.get_neighbours(n).map(|node|(node, W::one())))
+    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, usize)> + 'a> {
+        Box::new(self.get_neighbours(n).map(|node| (node, 1)))
     }
 }
