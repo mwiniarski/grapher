@@ -2,17 +2,17 @@
 pub type GraphNode = usize;
 
 pub struct GraphEdge {
-    pub uid: usize,
     pub source: usize,
-    pub target: usize
+    pub target: usize,
+    pub uid: usize
 }
 
 pub struct GraphNodeIterator<'a> {
-    pub iterator: Box<dyn Iterator<Item=GraphNode> + 'a>
+    pub iterator: Box<dyn Iterator<Item = GraphNode> + 'a>
 }
 
 pub struct GraphEdgeIterator<'a> {
-    pub iterator: Box<dyn Iterator<Item = (GraphNode,GraphNode)> + 'a>
+    pub iterator: Box<dyn Iterator<Item = GraphEdge> + 'a>
 }
 
 pub trait GraphType {
@@ -37,7 +37,7 @@ pub trait GraphType {
     fn get_degree(&self, node: GraphNode) -> usize;
 
     // Get a vector of neighbouring nodes
-    fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator;
+    fn get_neighbours(&self, node: GraphNode) -> GraphEdgeIterator;
 
     fn new() -> Self where Self:Sized;
 }

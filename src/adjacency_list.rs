@@ -28,7 +28,7 @@ impl AdjancencyList {
     }
 
     pub fn add_edge(&mut self, source: usize, target: usize, edge_index: usize) {
-        self.list[source].push(Connection{node_index: target, edge_index: edge_index});
+        self.list[source].push(Connection{node_index: target, edge_index});
     }
 
     pub fn get_neighbours(&self, node: usize) -> &Vec<Connection> {
@@ -67,7 +67,7 @@ impl<'a> Iterator for NodeIterator<'a> {
 }
 
 impl Iterator for EdgeIterator<'_> {
-    type Item = (usize, usize);
+    type Item = (usize, usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.find_next_existing_edge() {
@@ -76,7 +76,8 @@ impl Iterator for EdgeIterator<'_> {
 
         let ret = Some((
             self.node_index,
-            self.list.get_neighbours(self.node_index)[self.neighbour_index].node_index
+            self.list.get_neighbours(self.node_index)[self.neighbour_index].node_index,
+            self.list.get_neighbours(self.node_index)[self.neighbour_index].edge_index
         ));
 
         self.neighbour_index += 1;

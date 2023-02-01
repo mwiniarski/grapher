@@ -1,5 +1,5 @@
 // Need to 'use' an interface
-use grapher::graph::{Graph, Node, NodeIterator};
+use grapher::graph::{Graph, Edge, EdgeIterator};
 
 #[test]
 fn debug_graph()
@@ -38,7 +38,7 @@ fn iterate_edges()
 {
     let input_array = [(0,1),(2,3),(2,1)];
     let g = Graph::from(input_array);
-    let edges = g.edges().collect::<Vec<(Node,Node)>>();
+    let edges = g.edges().collect::<Vec<Edge>>();
     for (i, edge) in input_array.iter().enumerate() {
         assert_eq!(g.get_edge_values(edges[i]), *edge);
     }
@@ -72,10 +72,10 @@ fn get_neighbours()
 {
     let g = Graph::from([(1u32,2), (1,3), (1,4)]);
     let node = g.find_node_with_value(&1).expect("Node not found");
-    let mut iter: NodeIterator = g.get_neighbours(node);
-    assert_eq!(iter.next(), g.find_node_with_value(&2));
-    assert_eq!(iter.next(), g.find_node_with_value(&3));
-    assert_eq!(iter.next(), g.find_node_with_value(&4));
+    let mut iter: EdgeIterator = g.get_neighbours(node);
+    assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&2).unwrap());
+    assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&3).unwrap());
+    assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&4).unwrap());
 }
 
 #[test]

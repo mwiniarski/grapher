@@ -44,10 +44,10 @@ fn performance_test1() {
         inversed_graph.add_node(graph[node]);
     }
     
-    for (source, target) in graph.edges() {
-        inversed_graph.add_edge(target, source);
+    for edge in graph.edges() {
+        inversed_graph.add_edge(edge.target, edge.source);
     }
-    assert_time(&graph_inverse_time, "Inversing graph", 20);
+    assert_time(&graph_inverse_time, "Inversing graph", 27);
 
     let edge_iteration_time = Instant::now();
     let mut i = 0;

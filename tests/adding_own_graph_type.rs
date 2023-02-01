@@ -4,7 +4,7 @@
 
 use std::iter;
 
-use grapher::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator};
+use grapher::graph_trait::{GraphType, GraphNode, GraphEdgeIterator, GraphNodeIterator, GraphEdge};
 use grapher::graph::*;
 
 // 2. Define a new GraphType
@@ -57,12 +57,12 @@ impl GraphType for MyGraphType {
         self.storage.len()
     }
 
-    fn get_neighbours(&self, node: GraphNode) -> GraphNodeIterator {
-        GraphNodeIterator{
+    fn get_neighbours(&self, node: GraphNode) -> GraphEdgeIterator {
+        GraphEdgeIterator{
             iterator: Box::new(
                 self.storage[node]
                     .iter()
-                    .map(|index| index.clone() )
+                    .map(move |index| GraphEdge { source: node, target: index.clone(), uid: 0} )
             )
         }
     }
@@ -92,11 +92,11 @@ impl<'a> Iterator for MyGraphNodeIterator<'a> {
 }
 
 impl Iterator for MyGraphEdgeIterator<'_> {
-    type Item = (GraphNode, GraphNode);
+    type Item = GraphEdge;
 
     fn next(&mut self) -> Option<Self::Item> { 
         return match self.get_next_existing_edge() {
-            Some(target_node) => Some((self.index.0, target_node)),
+            Some(target_node) => Some(GraphEdge{source: self.index.0, target: target_node, uid: 0}),
             None => None
         }
     }

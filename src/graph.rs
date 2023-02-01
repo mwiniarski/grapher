@@ -4,24 +4,17 @@ use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
 use crate::graph_trait::*;
 use crate::path_finder::PathFindable;
-use crate::weighted_graph::WeightedGraph;
-use std::iter::Iterator;
+use crate::weighted_graph::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
-pub struct Node {
-    pub(crate) uid: usize
-}
+pub type Node = crate::weighted_graph::Node;
+pub type Edge = crate::weighted_graph::Edge;
+pub type EdgeIterator<'a> = crate::weighted_graph::EdgeIterator<'a>;
+pub type NodeIterator<'a> = crate::weighted_graph::NodeIterator<'a>;
 
-pub struct NodeIterator<'a> {
-    pub(crate) iterator: GraphNodeIterator<'a>
-}
-
-pub struct EdgeIterator<'a> {
-    pub(crate) iterator: GraphEdgeIterator<'a>
-}
+struct EmptyWeight;
 
 pub struct Graph<T> {
-    graph: WeightedGraph<T, ()>
+    graph: WeightedGraph<T, EmptyWeight>
 }
 
 impl<T> Graph<T> {
@@ -34,7 +27,7 @@ impl<T> Graph<T> {
     // Add edge between two existing nodes
     // O(1)
     pub fn add_edge(&mut self, source: Node, target: Node) {
-        self.graph.add_edge(source, target, ())
+        self.graph.add_edge(source, target, EmptyWeight)
     }
 
     // Iterate over all nodes
@@ -53,7 +46,7 @@ impl<T> Graph<T> {
     }
 
     // Get a vector of neighbouring nodes
-    pub fn get_neighbours(&self, node: Node) -> NodeIterator {
+    pub fn get_neighbours(&self, node: Node) -> EdgeIterator {
         self.graph.get_neighbours(node)
     }
 
@@ -65,7 +58,7 @@ impl<T> Graph<T> {
 impl<T: Copy> Graph<T> {
     // Get tuple of values associated with edge
     // O(1)
-    pub fn get_edge_values(&self, edge: (Node, Node)) -> (T, T) {
+    pub fn get_edge_values(&self, edge: Edge) -> (T, T) {
         self.graph.get_edge_values(edge)
     }
 }
@@ -96,22 +89,6 @@ impl<T: PartialEq> Graph<T> {
     }
 }
 
-impl<'a> Iterator for NodeIterator<'a> {
-    type Item = Node;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.iterator.next().map(|node| (Node::from(node)))
-    }
-}
-
-impl<'a> Iterator for EdgeIterator<'a> {
-    type Item = (Node, Node);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.iterator.next().map(|edge| (Node::from(edge.0), Node::from(edge.1)))
-    }
-}
-
 impl<T: fmt::Display> Graph<T> {
     fn print(&self, pretty: bool) -> String {
 
@@ -120,7 +97,7 @@ impl<T: fmt::Display> Graph<T> {
             output.push_str(&format!("{}[", self[node]));
 
             for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
-                output.push_str(&self[neighbour].to_string());
+                output.push_str(&self[neighbour.target].to_string());
                 if num_index < self.get_degree(node) - 1 {
                     output.push(',');
                 }
@@ -220,11 +197,6 @@ impl<'a, T> PathFindable<'a, Node, usize> for Graph<T> {
     }
 
     fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, usize)> + 'a> {
-        Box::new(self.get_neighbours(n).map(|node| (node, 1)))
+        Box::new(self.get_neighbours(n).map(|edge| (edge.target, 1)))
     }
-}
-
-impl Node {
-    pub fn new() -> Self { Node { uid: GraphNode::MAX } }
-    pub fn from(node: GraphNode) -> Self { Node { uid: node } }
 }

@@ -4,12 +4,22 @@ use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
 
 use crate::directed::Directed;
-use crate::graph::{Node, NodeIterator, EdgeIterator};
 use crate::graph_trait::*;
 use crate::path_finder::PathFindable;
 use crate::undirected::Undirected;
 use std::iter::Iterator;
 
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
+pub struct Node {
+    pub(crate) uid: usize
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
+pub struct Edge {
+    pub source: Node,
+    pub target: Node,
+    pub(crate) uid: usize
+}
 
 pub struct WeightedGraph<T, W> {
     graph: Box<dyn GraphType>,
@@ -32,7 +42,8 @@ impl<T, W> WeightedGraph<T, W> {
         self.graph.add_edge(
             source.uid,
             target.uid,
-            self.edge_count.clone());
+            self.edge_count);
+        self.edge_count += 1;
         self.weights.push(weight);
     }
 
@@ -52,20 +63,24 @@ impl<T, W> WeightedGraph<T, W> {
     }
 
     // Get a vector of neighbouring nodes
-    pub fn get_neighbours(&self, node: Node) -> NodeIterator {
-        NodeIterator { iterator: self.graph.get_neighbours(node.uid) }
+    pub fn get_neighbours(&self, node: Node) -> EdgeIterator {
+        EdgeIterator { iterator: self.graph.get_neighbours(node.uid) }
     }
 
     pub fn get_degree(&self, node: Node) -> usize {
         self.graph.get_degree(node.uid)
+    }
+
+    pub fn get_weight(&self, edge: Edge) -> &W {
+        &self.weights[edge.uid]
     }
 }
 
 impl<T: Copy, W> WeightedGraph<T, W> {
     // Get tuple of values associated with edge
     // O(1)
-    pub fn get_edge_values(&self, edge: (Node, Node)) -> (T, T) {
-        (self.values[edge.0.uid], self.values[edge.1.uid])
+    pub fn get_edge_values(&self, edge: Edge) -> (T, T) {
+        (self.values[edge.source.uid], self.values[edge.target.uid])
     }
 }
 
@@ -95,7 +110,7 @@ impl<T: PartialEq, W> WeightedGraph<T, W> {
     }
 }
 
-impl<T: fmt::Display, W> WeightedGraph<T, W> {
+impl<T: fmt::Display, W: fmt::Display> WeightedGraph<T, W> {
     fn print(&self, pretty: bool) -> String {
 
         let mut output = String::new();
@@ -103,7 +118,9 @@ impl<T: fmt::Display, W> WeightedGraph<T, W> {
             output.push_str(&format!("{}[", self[node]));
 
             for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
-                output.push_str(&self[neighbour].to_string());
+                output.push_str(&format!("{}({})",
+                    &self[neighbour.target].to_string(),
+                    &self.weights[neighbour.uid]));
                 if num_index < self.get_degree(node) - 1 {
                     output.push(',');
                 }
@@ -114,13 +131,13 @@ impl<T: fmt::Display, W> WeightedGraph<T, W> {
     }
 }
 
-impl<T: fmt::Display, W> fmt::Display for WeightedGraph<T, W> {
+impl<T: fmt::Display, W: fmt::Display> fmt::Display for WeightedGraph<T, W> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(true))
     }
 }
 
-impl<T: fmt::Display, W> fmt::Debug for WeightedGraph<T, W> {
+impl<T: fmt::Display, W: fmt::Display> fmt::Debug for WeightedGraph<T, W> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(false))
     }
@@ -197,12 +214,46 @@ impl<T, W> WeightedGraph<T, W> {
     }
 }
 
-impl<'a, T, W> PathFindable<'a, Node, usize> for WeightedGraph<T, W> {
+impl Node {
+    pub fn new() -> Self { Node { uid: GraphNode::MAX } }
+    pub fn from(node: GraphNode) -> Self { Node { uid: node } }
+}
+
+pub struct NodeIterator<'a> {
+    pub(crate) iterator: GraphNodeIterator<'a>
+}
+
+pub struct EdgeIterator<'a> {
+    pub(crate) iterator: GraphEdgeIterator<'a>
+}
+
+impl<'a> Iterator for NodeIterator<'a> {
+    type Item = Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.iterator.next().map(|node| (Node::from(node)))
+    }
+}
+
+impl<'a> Iterator for EdgeIterator<'a> {
+    type Item = Edge;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.iterator.next()
+            .map(|edge| 
+                Edge { source: Node::from(edge.source), 
+                       target: Node::from(edge.target), 
+                       uid: edge.uid }
+            )
+    }
+}
+
+impl<'a, T, W: Copy> PathFindable<'a, Node, W> for WeightedGraph<T, W> {
     fn nodes(&'a self) -> Box<dyn Iterator<Item=Node> + 'a> {
         Box::new(self.nodes())
     }
 
-    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, usize)> + 'a> {
-        Box::new(self.get_neighbours(n).map(|node| (node, 1)))
+    fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a> {
+        Box::new(self.get_neighbours(n).map(|edge| (edge.target, self.weights[edge.uid])))
     }
 }
