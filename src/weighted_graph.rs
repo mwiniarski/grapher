@@ -4,10 +4,10 @@ use std::ops::{IndexMut, Index};
 use std::{fmt, hash::Hash};
 
 use crate::directed::Directed;
-use crate::graph_trait::*;
+use crate::{graph_trait::*};
 use crate::path_finder::PathFindable;
 use crate::undirected::Undirected;
-use std::iter::Iterator;
+use std::iter::{Iterator};
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Node {
@@ -48,8 +48,12 @@ impl<T, W> WeightedGraph<T, W> {
     }
 
     // Iterate over all nodes
-    pub fn nodes(&self) -> NodeIterator {
-        NodeIterator { iterator: self.graph.nodes() }
+    pub fn nodes(&self) -> NodeIter<T> {
+        NodeIter { iterator: self.graph.nodes(), values: self.values.as_ptr() }
+    }
+
+    pub fn nodes_mut(&mut self) -> NodeIterMut<T> {
+        NodeIterMut { iter: self.graph.nodes(), vals: self.values.as_mut_ptr() }
     }
 
     // Iterate over all edges
@@ -102,8 +106,8 @@ impl<T, W> IndexMut<Node> for WeightedGraph<T, W> {
 impl<T: PartialEq, W> WeightedGraph<T, W> {
     pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
         for node in self.nodes() {
-            if &self[node] == value {
-                return Some(node);
+            if node.1 == value {
+                return Some(node.0);
             }
         }
         None
@@ -115,13 +119,13 @@ impl<T: fmt::Display, W: fmt::Display> WeightedGraph<T, W> {
 
         let mut output = String::new();
         for node in self.nodes() {
-            output.push_str(&format!("{}[", self[node]));
+            output.push_str(&format!("{}[", self[node.0]));
 
-            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
+            for (num_index, neighbour) in self.get_neighbours(node.0).into_iter().enumerate() {
                 output.push_str(&format!("{}({})",
                     &self[neighbour.target].to_string(),
                     &self.weights[neighbour.uid]));
-                if num_index < self.get_degree(node) - 1 {
+                if num_index < self.get_degree(node.0) - 1 {
                     output.push(',');
                 }
             }
@@ -219,19 +223,51 @@ impl Node {
     pub fn from(node: GraphNode) -> Self { Node { uid: node } }
 }
 
-pub struct NodeIterator<'a> {
-    pub(crate) iterator: GraphNodeIterator<'a>
+pub struct NodeIterMut<'a, T> {
+    iter: GraphNodeIterator<'a>,
+    vals: *mut T
+}
+
+impl<'a, T: 'a> Iterator for NodeIterMut<'a, T> {
+    type Item = (&'a mut T, Node);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.iterator.next() {
+            Some(i) => {
+                unsafe {
+                    // SAFETY: i is always a valid index for values vector
+                    let ptr = self.vals.offset(i as isize);
+                    Some((&mut *ptr, Node::from(i)))
+                }
+            },
+            None => None,
+        }
+    }
+}
+
+pub struct NodeIter<'a, T> {
+    pub(crate) iterator: GraphNodeIterator<'a>,
+    pub(crate) values: *const T
 }
 
 pub struct EdgeIterator<'a> {
     pub(crate) iterator: GraphEdgeIterator<'a>
 }
 
-impl<'a> Iterator for NodeIterator<'a> {
-    type Item = Node;
+impl<'a, T: 'a> Iterator for NodeIter<'a, T> {
+    type Item = (Node, &'a T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.iterator.next().map(|node| (Node::from(node)))
+        match self.iterator.iterator.next() {
+            Some(i) => {
+                unsafe {
+                    // SAFETY: i is always a valid index for values vector
+                    let ptr = self.values.offset(i as isize);
+                    Some((Node::from(i), &*ptr))
+                }
+            },
+            None => None,
+        }
     }
 }
 
@@ -250,7 +286,7 @@ impl<'a> Iterator for EdgeIterator<'a> {
 
 impl<'a, T, W: Copy> PathFindable<'a, Node, W> for WeightedGraph<T, W> {
     fn nodes(&'a self) -> Box<dyn Iterator<Item=Node> + 'a> {
-        Box::new(self.nodes())
+        Box::new(self.nodes().map(|(node, _)| node))
     }
 
     fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a> {

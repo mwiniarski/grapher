@@ -12,12 +12,7 @@ fn compare_results<T: std::fmt::Debug + Eq, const N: usize>(graph: &Graph<T>, va
 
 // O(n) way to get the node with value
 fn n<T: Eq>(graph: &Graph<T>, value: T) -> Node {
-    for node in graph.nodes() {
-        if graph[node] == value {
-            return node;
-        }
-    }
-    panic!("Can't find node with that value!");
+    graph.find_node_with_value(&value).expect("Can't find node")
 }
 
 #[test]

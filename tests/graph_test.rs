@@ -28,7 +28,7 @@ fn iterate_nodes()
     let g = Graph::from([(0,1),(4,5)]);
     let node_list = [0, 1, 4, 5];
     for (index, node) in g.nodes().enumerate() {
-        assert_eq!(g[node], node_list[index]);
+        assert_eq!(*node.1, node_list[index]);
     }
 
 }
@@ -56,7 +56,7 @@ fn graph_does_not_has_ghost_nodes()
 {
     let g = Graph::from([(1,2)]);
     for node in g.nodes() {
-        assert_ne!(g[node], 0);
+        assert_ne!(*node.1, 0);
     }
 }
 

@@ -9,7 +9,7 @@ use crate::weighted_graph::*;
 pub type Node = crate::weighted_graph::Node;
 pub type Edge = crate::weighted_graph::Edge;
 pub type EdgeIterator<'a> = crate::weighted_graph::EdgeIterator<'a>;
-pub type NodeIterator<'a> = crate::weighted_graph::NodeIterator<'a>;
+pub type NodeIter<'a, T> = crate::weighted_graph::NodeIter<'a, T>;
 
 struct EmptyWeight;
 
@@ -31,7 +31,7 @@ impl<T> Graph<T> {
     }
 
     // Iterate over all nodes
-    pub fn nodes(&self) -> NodeIterator {
+    pub fn nodes(&self) -> NodeIter<T> {
         self.graph.nodes()
     }
 
@@ -72,7 +72,6 @@ impl<T> Index<Node> for Graph<T> {
 }
 
 impl<T> IndexMut<Node> for Graph<T>  {
-
     fn index_mut(&mut self, index: Node) -> &mut Self::Output {
         &mut self.graph[index]
     }
@@ -80,12 +79,7 @@ impl<T> IndexMut<Node> for Graph<T>  {
 
 impl<T: PartialEq> Graph<T> {
     pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
-        for node in self.nodes() {
-            if &self[node] == value {
-                return Some(node);
-            }
-        }
-        None
+        self.graph.find_node_with_value(value)
     }
 }
 
@@ -94,11 +88,11 @@ impl<T: fmt::Display> Graph<T> {
 
         let mut output = String::new();
         for node in self.nodes() {
-            output.push_str(&format!("{}[", self[node]));
+            output.push_str(&format!("{}[", self[node.0]));
 
-            for (num_index, neighbour) in self.get_neighbours(node).into_iter().enumerate() {
+            for (num_index, neighbour) in self.get_neighbours(node.0).into_iter().enumerate() {
                 output.push_str(&self[neighbour.target].to_string());
-                if num_index < self.get_degree(node) - 1 {
+                if num_index < self.get_degree(node.0) - 1 {
                     output.push(',');
                 }
             }
@@ -193,7 +187,7 @@ impl<T : Eq + Hash + Clone> Graph<T> {
 
 impl<'a, T> PathFindable<'a, Node, usize> for Graph<T> {
     fn nodes(&'a self) -> Box<dyn Iterator<Item=Node> + 'a> {
-        Box::new(self.nodes())
+        Box::new(self.nodes().map(|(node, _)| node))
     }
 
     fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, usize)> + 'a> {
