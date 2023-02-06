@@ -1,5 +1,5 @@
 // Need to 'use' an interface
-use grapher::graph::{Graph, Edge, EdgeIterator};
+use grapher::graph::{Graph, Edge};
 
 #[test]
 fn debug_graph()
@@ -72,7 +72,7 @@ fn get_neighbours()
 {
     let g = Graph::from([(1u32,2), (1,3), (1,4)]);
     let node = g.find_node_with_value(&1).expect("Node not found");
-    let mut iter: EdgeIterator = g.get_neighbours(node);
+    let mut iter = g.get_neighbours(node);
     assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&2).unwrap());
     assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&3).unwrap());
     assert_eq!(iter.next().unwrap().target, g.find_node_with_value(&4).unwrap());

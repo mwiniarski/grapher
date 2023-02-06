@@ -53,13 +53,17 @@ impl<T, W> WeightedGraph<T, W> {
     }
 
     pub fn nodes_mut(&mut self) -> NodeIterMut<T> {
-        NodeIterMut { iter: self.graph.nodes(), vals: self.values.as_mut_ptr() }
+        NodeIterMut { iterator: self.graph.nodes(), values: self.values.as_mut_ptr() }
     }
 
     // Iterate over all edges
-    pub fn edges(&self) -> EdgeIterator {
-        EdgeIterator { iterator: self.graph.edges() }
+    pub fn edges(&self) -> EdgeIter<W> {
+        EdgeIter { iterator: self.graph.edges(), weights: self.weights.as_ptr() }
     }
+
+    pub fn edges_mut(&mut self) -> EdgeIterMut<W> {
+        EdgeIterMut { iterator: self.graph.edges(), weights: self.weights.as_mut_ptr() }
+    } 
 
     // Number of nodes
     pub fn len(&self) -> usize {
@@ -67,8 +71,8 @@ impl<T, W> WeightedGraph<T, W> {
     }
 
     // Get a vector of neighbouring nodes
-    pub fn get_neighbours(&self, node: Node) -> EdgeIterator {
-        EdgeIterator { iterator: self.graph.get_neighbours(node.uid) }
+    pub fn get_neighbours(&self, node: Node) -> EdgeIter<W> {
+        EdgeIter { iterator: self.graph.get_neighbours(node.uid), weights: self.weights.as_ptr() }
     }
 
     pub fn get_degree(&self, node: Node) -> usize {
@@ -114,17 +118,17 @@ impl<T: PartialEq, W> WeightedGraph<T, W> {
     }
 }
 
-impl<T: fmt::Display, W: fmt::Display> WeightedGraph<T, W> {
+impl<T: fmt::Debug, W: fmt::Debug> WeightedGraph<T, W> {
     fn print(&self, pretty: bool) -> String {
 
         let mut output = String::new();
         for node in self.nodes() {
-            output.push_str(&format!("{}[", self[node.0]));
+            // 0{value}[
+            output.push_str(&format!("{:?}{{{:?}}}[", node.0.uid, node.1));
 
-            for (num_index, neighbour) in self.get_neighbours(node.0).into_iter().enumerate() {
-                output.push_str(&format!("{}({})",
-                    &self[neighbour.target].to_string(),
-                    &self.weights[neighbour.uid]));
+            for (num_index, neighbour) in self.get_neighbours(node.0).enumerate() {
+                // 1(weight)
+                output.push_str(&format!("{:?}({:?})", neighbour.0.target.uid, neighbour.1));
                 if num_index < self.get_degree(node.0) - 1 {
                     output.push(',');
                 }
@@ -135,15 +139,15 @@ impl<T: fmt::Display, W: fmt::Display> WeightedGraph<T, W> {
     }
 }
 
-impl<T: fmt::Display, W: fmt::Display> fmt::Display for WeightedGraph<T, W> {
+// impl<T: fmt::Display, W: fmt::Display> fmt::Display for WeightedGraph<T, W> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "{}", self.print(true))
+//     }
+// }
+
+impl<T: fmt::Debug, W: fmt::Debug> fmt::Debug for WeightedGraph<T, W> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.print(true))
-    }
-}
-
-impl<T: fmt::Display, W: fmt::Display> fmt::Debug for WeightedGraph<T, W> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.print(false))
     }
 }
 
@@ -223,35 +227,32 @@ impl Node {
     pub fn from(node: GraphNode) -> Self { Node { uid: node } }
 }
 
-pub struct NodeIterMut<'a, T> {
-    iter: GraphNodeIterator<'a>,
-    vals: *mut T
-}
-
-impl<'a, T: 'a> Iterator for NodeIterMut<'a, T> {
-    type Item = (&'a mut T, Node);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.iterator.next() {
-            Some(i) => {
-                unsafe {
-                    // SAFETY: i is always a valid index for values vector
-                    let ptr = self.vals.offset(i as isize);
-                    Some((&mut *ptr, Node::from(i)))
-                }
-            },
-            None => None,
+impl Edge {
+    pub fn from(edge: GraphEdge) -> Self { 
+        Edge { source: Node { uid: edge.source }, 
+               target: Node { uid: edge.target }, 
+               uid: edge.uid } 
         }
-    }
 }
 
 pub struct NodeIter<'a, T> {
-    pub(crate) iterator: GraphNodeIterator<'a>,
-    pub(crate) values: *const T
+    iterator: GraphNodeIterator<'a>,
+    values: *const T
 }
 
-pub struct EdgeIterator<'a> {
-    pub(crate) iterator: GraphEdgeIterator<'a>
+pub struct NodeIterMut<'a, T> {
+    iterator: GraphNodeIterator<'a>,
+    values: *mut T
+}
+
+pub struct EdgeIter<'a, W> {
+    iterator: GraphEdgeIterator<'a>,
+    weights: *const W
+}
+
+pub struct EdgeIterMut<'a, W> {
+    iterator: GraphEdgeIterator<'a>,
+    weights: *mut W
 }
 
 impl<'a, T: 'a> Iterator for NodeIter<'a, T> {
@@ -271,16 +272,54 @@ impl<'a, T: 'a> Iterator for NodeIter<'a, T> {
     }
 }
 
-impl<'a> Iterator for EdgeIterator<'a> {
-    type Item = Edge;
+impl<'a, T: 'a> Iterator for NodeIterMut<'a, T> {
+    type Item = (Node, &'a mut T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.iterator.next()
-            .map(|edge| 
-                Edge { source: Node::from(edge.source), 
-                       target: Node::from(edge.target), 
-                       uid: edge.uid }
-            )
+        match self.iterator.iterator.next() {
+            Some(i) => {
+                unsafe {
+                    // SAFETY: i is always a valid index for values vector
+                    let ptr = self.values.offset(i as isize);
+                    Some((Node::from(i), &mut *ptr))
+                }
+            },
+            None => None,
+        }
+    }
+}
+
+impl<'a, W: 'a> Iterator for EdgeIter<'a, W> {
+    type Item = (Edge, &'a W);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.iterator.next() {
+            Some(edge) => {
+                unsafe {
+                    // SAFETY: i is always a valid index for values vector
+                    let ptr = self.weights.offset(edge.uid as isize);
+                    Some((Edge::from(edge), &*ptr))
+                }
+            },
+            None => None,
+        }
+    }
+}
+
+impl<'a, W: 'a> Iterator for EdgeIterMut<'a, W> {
+    type Item = (Edge, &'a mut W);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.iterator.next() {
+            Some(edge) => {
+                unsafe {
+                    // SAFETY: i is always a valid index for values vector
+                    let ptr = self.weights.offset(edge.uid as isize);
+                    Some((Edge::from(edge), &mut *ptr))
+                }
+            },
+            None => None,
+        }
     }
 }
 
@@ -290,6 +329,6 @@ impl<'a, T, W: Copy> PathFindable<'a, Node, W> for WeightedGraph<T, W> {
     }
 
     fn get_neighbours(&'a self, n: Node) -> Box<dyn Iterator<Item=(Node, W)> + 'a> {
-        Box::new(self.get_neighbours(n).map(|edge| (edge.target, self.weights[edge.uid])))
+        Box::new(self.get_neighbours(n).map(|edge| (edge.0.target, *edge.1)))
     }
 }

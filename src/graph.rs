@@ -8,7 +8,6 @@ use crate::weighted_graph::*;
 
 pub type Node = crate::weighted_graph::Node;
 pub type Edge = crate::weighted_graph::Edge;
-pub type EdgeIterator<'a> = crate::weighted_graph::EdgeIterator<'a>;
 pub type NodeIter<'a, T> = crate::weighted_graph::NodeIter<'a, T>;
 
 struct EmptyWeight;
@@ -36,8 +35,8 @@ impl<T> Graph<T> {
     }
 
     // Iterate over all edges
-    pub fn edges(&self) -> EdgeIterator {
-        self.graph.edges()
+    pub fn edges(&self) -> EdgeIter {
+        EdgeIter { iterator: self.graph.edges() }
     }
 
     // Number of nodes
@@ -46,8 +45,8 @@ impl<T> Graph<T> {
     }
 
     // Get a vector of neighbouring nodes
-    pub fn get_neighbours(&self, node: Node) -> EdgeIterator {
-        self.graph.get_neighbours(node)
+    pub fn get_neighbours(&self, node: Node) -> EdgeIter {
+        EdgeIter { iterator: self.graph.get_neighbours(node) }
     }
 
     pub fn get_degree(&self, node: Node) -> usize {
@@ -80,6 +79,21 @@ impl<T> IndexMut<Node> for Graph<T>  {
 impl<T: PartialEq> Graph<T> {
     pub fn find_node_with_value(&self, value: &T) -> Option<Node> {
         self.graph.find_node_with_value(value)
+    }
+}
+
+pub struct EdgeIter<'a> {
+    iterator: crate::weighted_graph::EdgeIter<'a, EmptyWeight>
+}
+
+impl<'a> Iterator for EdgeIter<'a> {
+    type Item = Edge;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iterator.next() {
+            Some((edge, _)) => Some(edge),
+            None => None
+        }
     }
 }
 
